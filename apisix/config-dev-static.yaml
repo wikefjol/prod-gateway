@@ -1,0 +1,39 @@
+deployment:
+  role: traditional
+
+  admin:
+    admin_key:
+      - name: admin
+        key: b690a22de520f12fd9615ab43a443b5aa7239d7153ca2850
+        role: admin
+      - name: viewer
+        key: e57659a3af5a6163128ef2b8388381e4b9f9576959f868e2771bb3ed
+        role: viewer
+    allow_admin:
+      - 127.0.0.1
+      - ::1
+      - 129.16.0.0/16
+      - 172.16.0.0/12
+    admin_listen:
+      port: 9180
+
+  enable_admin_ui: true
+
+apisix:
+  node_listen:
+    - 9080
+
+etcd:
+  host:
+    - "http://etcd-dev:2379"
+  prefix: "/apisix-dev"
+  timeout: 30
+
+plugins:
+  - proxy-rewrite
+  - limit-count
+  - cors
+  - key-auth
+  - openid-connect
+  - consumer-restriction
+  # - cost_meter

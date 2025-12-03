@@ -1,0 +1,69 @@
+networks:
+  apisix:
+    driver: bridge
+
+volumes:
+  etcd_data:
+  apisix_logs:
+  admin_webapp_data:
+
+services:
+  etcd:
+    image: bitnamilegacy/etcd:3.5.11
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    volumes:
+      - etcd_data:/bitnami/etcd
+    networks:
+      - apisix
+    restart: unless-stopped
+
+  apisix:
+    build:
+      context: ./apisix
+      dockerfile: Dockerfile
+    depends_on:
+      - etcd
+    networks:
+      - apisix
+    ports:
+      - "9080:9080"
+      - "9180:9180"  # expose if you want Admin API from host
+      # - "9443:9443"
+      
+    environment:
+      - ADMIN_KEY=${ADMIN_KEY}
+      - VIEWER_KEY=${VIEWER_KEY}
+      - APISIX_DEPLOYMENT_ETCD_HOST=["http://etcd:2379"]
+    volumes:
+      - apisix_logs:/usr/local/apisix/logs
+    restart: unless-stopped
+
+  admin-webapp:
+    build:
+      context: ./admin-webapp
+      dockerfile: Dockerfile
+    depends_on:
+      - apisix
+    networks:
+      - apisix
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APISIX_ADMIN_API=http://apisix:9180/apisix/admin
+      - GATEWAY_URL=http://apisix:9080
+      - ADMIN_KEY=${ADMIN_KEY}
+      - VIEWER_KEY=${VIEWER_KEY}
+    volumes:
+      - admin_webapp_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
