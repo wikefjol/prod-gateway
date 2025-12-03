@@ -1,0 +1,39 @@
+deployment:
+  role: traditional
+
+  admin:
+    admin_key:
+      - name: admin
+        key: ${ADMIN_KEY}    # filled from env by entrypoint
+        role: admin
+      - name: viewer
+        key: ${VIEWER_KEY}
+        role: viewer
+    allow_admin:
+      - 127.0.0.1
+      - ::1
+      - 129.16.0.0/16
+      - 172.16.0.0/12
+    admin_listen:
+      port: 9181
+
+  enable_admin_ui: true
+
+apisix:
+  node_listen:
+    - 9081
+
+etcd:
+  host:
+    - "${ETCD_HOST}"
+  prefix: "/apisix-test"
+  timeout: 30
+
+plugins:
+  - proxy-rewrite
+  - limit-count
+  - cors
+  - key-auth
+  - openid-connect
+  - consumer-restriction
+  # - cost_meter

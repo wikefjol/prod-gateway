@@ -1,0 +1,26 @@
+# Environment files with sensitive keys
+.env
+admin.env
+
+# APISIX source repository (external dependency)
+apisix-source-repo/
+
+# Docker volumes and logs
+logs/
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code plans (user-specific)
+.claude/

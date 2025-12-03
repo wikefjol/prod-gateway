@@ -1,0 +1,38 @@
+networks:
+  apisix-test:
+    driver: bridge
+
+volumes:
+  etcd_data_test:
+  apisix_logs_test:
+
+services:
+  etcd-test:
+    image: bitnamilegacy/etcd:3.5.11
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-test:2379
+    volumes:
+      - etcd_data_test:/bitnami/etcd
+    networks:
+      - apisix-test
+    restart: unless-stopped
+
+  apisix-test:
+    build:
+      context: ./apisix
+      dockerfile: Dockerfile
+    depends_on:
+      - etcd-test
+    networks:
+      - apisix-test
+    ports:
+      - "9081:9081"
+      - "9181:9181"
+    environment:
+      - CUSTOM_PROFILE=test
+    volumes:
+      - apisix_logs_test:/usr/local/apisix/logs
+    restart: unless-stopped
+
