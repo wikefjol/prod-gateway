@@ -1,6 +1,9 @@
 # Environment files with sensitive keys
 .env
 admin.env
+.env.dev
+.env.test
+
 
 # APISIX source repository (external dependency)
 apisix-source-repo/
