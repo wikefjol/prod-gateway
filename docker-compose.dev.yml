@@ -32,7 +32,28 @@ services:
       - "9180:9180"
     environment:
       - CUSTOM_PROFILE=dev
+      - ADMIN_KEY=${ADMIN_KEY}
     volumes:
       - apisix_logs_dev:/usr/local/apisix/logs
     restart: unless-stopped
+    container_name: apisix-dev
+
+  loader-dev:
+    image: curlimages/curl:latest
+    depends_on:
+      - apisix-dev
+    networks:
+      - apisix-dev
+    env_file:
+      - .dev.env
+      - admin.env
+    volumes:
+      - ./:/opt/apisix-gateway:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        chmod +x /opt/apisix-gateway/scripts/bootstrap-oidc-dev.sh
+        /opt/apisix-gateway/scripts/bootstrap-oidc-dev.sh
+    restart: "no"
 
