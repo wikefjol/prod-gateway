@@ -3,7 +3,7 @@
 admin.env
 .dev.env
 .test.env
-
+bin/
 # APISIX source repository (external dependency)
 apisix-source-repo/
 
