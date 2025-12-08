@@ -33,6 +33,7 @@ plugins:
   - limit-count
   - cors
   - key-auth
+  - hmac-auth
   - openid-connect
   - consumer-restriction
   # - cost_meter

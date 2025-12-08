@@ -38,6 +38,21 @@ services:
     restart: unless-stopped
     container_name: apisix-dev
 
+  keycloak-dev:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+    ports:
+      - "8080:8080"
+    networks:
+      - apisix-dev
+    command: ["start-dev"]
+    restart: unless-stopped
+    container_name: keycloak-dev
+
   loader-dev:
     image: curlimages/curl:latest
     depends_on:
