@@ -16,8 +16,7 @@ deployment:
       - 172.16.0.0/12
     admin_listen:
       port: 9180
-
-  enable_admin_ui: true
+    enable_admin_ui: true
 
 apisix:
   node_listen:

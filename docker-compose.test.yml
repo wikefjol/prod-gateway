@@ -36,3 +36,17 @@ services:
       - apisix_logs_test:/usr/local/apisix/logs
     restart: unless-stopped
 
+  loader-test:
+    image: curlimages/curl:latest
+    depends_on:
+      - apisix-test
+    networks:
+      - apisix-test
+    env_file:
+      - .test.env
+    volumes:
+      - ./:/opt/apisix-gateway:ro
+    user: "364274:364274"  # Map to host user for proper permissions
+    command: ["/bin/sh", "/opt/apisix-gateway/scripts/bootstrap-oidc-test.sh"]
+    restart: "no"
+
