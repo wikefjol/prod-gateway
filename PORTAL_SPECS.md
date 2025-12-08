@@ -42,13 +42,14 @@ For v0 we run a local IdP, for example:
 
 * **Keycloak in Docker** (or IdentityServer, etc.), with:
 
-  * One “test realm” / “test tenant”.
-  * A few test users (alice, bob, etc).
+  * One "quickstart" realm.
+  * Test users: alice, bob, charlie (password: password123).
 
 APISIX `openid-connect` plugin is configured to:
 
-* Use the mock IdP’s discovery URL, client_id, client_secret.
-* Protect the **Portal route** (e.g. `/portal`).
+* Use the mock IdP's discovery URL: `http://keycloak-dev:8080/realms/quickstart/.well-known/openid-configuration`
+* Client: `apisix-portal` with scopes `openid profile email`.
+* Protect the **Portal route** (`/portal/*`).
 * After successful auth, **inject headers** to the portal upstream:
 
   * `X-User-Oid` – set to the IdP’s `sub` (or a configured stable claim).
@@ -295,4 +296,20 @@ No multi-key UI, labels, or advanced metadata in v0.
 
 ---
 
-If you want, I can also write a tiny “dev checklist” (e.g. 1) start Keycloak container, 2) create realm/client/user, 3) configure APISIX OIDC, 4) verify `/portal` redirects & injects headers) that you can add as a separate subticket.
+## 8. Development Status (v0)
+
+### ✅ Infrastructure Complete
+- Keycloak running in Docker with "quickstart" realm
+- APISIX OIDC plugin configured and working
+- Test users: alice, bob, charlie (password: password123)
+- Portal route (`/portal/*`) properly redirects to Keycloak for authentication
+- Demo verification steps available in `KEYCLOAK_DEMO.md`
+
+### 🚧 Next: Portal Backend Implementation
+The portal backend service needs to be implemented to:
+1. Handle authenticated requests from APISIX
+2. Read injected identity headers (`X-User-Oid`, etc.)
+3. Manage Consumers and Credentials via APISIX Admin API
+4. Provide self-service UI for key management
+
+See the APISIX Admin API documentation for Consumer and Credential management details.
