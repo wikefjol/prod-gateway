@@ -1,0 +1,337 @@
+{
+  "test_suite_name": "Portal Backend API Behavior Tests",
+  "test_suite_version": "1.0.0",
+  "description": "Validates expected behavior of portal backend API endpoints",
+  "environment": "development",
+  "prerequisites": {
+    "services_required": ["apisix-dev", "etcd-dev", "portal-backend-dev"],
+    "environment_variables": ["ADMIN_KEY", "DEV_MODE", "DEV_ADMIN_PASSWORD"],
+    "test_data": {
+      "test_user": {
+        "user_oid": "test-behavior-user",
+        "user_name": "Behavior Test User",
+        "user_email": "behavior@test.example.com"
+      }
+    }
+  },
+  "tests": [
+    {
+      "test_id": "health_check",
+      "name": "Portal Backend Health Check",
+      "description": "Verify portal backend health endpoint responds correctly",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/health",
+        "headers": {},
+        "body": null,
+        "timeout": 5
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "status": "healthy",
+          "service": "portal-backend"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.status == 'healthy'",
+        "response.json.service == 'portal-backend'"
+      ]
+    },
+    {
+      "test_id": "portal_dashboard_no_auth",
+      "name": "Portal Dashboard Without Authentication",
+      "description": "Verify portal dashboard returns 401 without user headers",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/portal/",
+        "headers": {},
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 401,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "error": "Authentication required",
+          "details": "Missing X-User-Oid header - user not authenticated"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 401",
+        "response.json.error == 'Authentication required'",
+        "'X-User-Oid' in response.json.details"
+      ]
+    },
+    {
+      "test_id": "portal_dashboard_with_auth",
+      "name": "Portal Dashboard With Valid Authentication",
+      "description": "Verify portal dashboard loads correctly with valid user headers",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/portal/",
+        "headers": {
+          "X-User-Oid": "test-behavior-user",
+          "X-User-Name": "Behavior Test User",
+          "X-User-Email": "behavior@test.example.com"
+        },
+        "body": null,
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body_contains": [
+          "Portal Dashboard",
+          "Behavior Test User",
+          "behavior@test.example.com"
+        ]
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'text/html' in response.headers['content-type']",
+        "'Portal Dashboard' in response.text",
+        "'Behavior Test User' in response.text"
+      ]
+    },
+    {
+      "test_id": "get_key_new_user",
+      "name": "Get API Key - New User",
+      "description": "Verify get key operation for user with no existing credentials",
+      "prerequisite_cleanup": {
+        "description": "Ensure user has no existing consumer",
+        "cleanup_request": {
+          "method": "DELETE",
+          "url": "http://localhost:9180/apisix/admin/consumers/test-behavior-user",
+          "headers": {
+            "X-API-KEY": "${ADMIN_KEY}"
+          },
+          "ignore_errors": [404]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:3001/portal/get-key",
+        "headers": {
+          "X-User-Oid": "test-behavior-user",
+          "X-User-Name": "Behavior Test User",
+          "X-User-Email": "behavior@test.example.com",
+          "Content-Type": "application/json"
+        },
+        "body": null,
+        "timeout": 20
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "success": true,
+          "message": "API key retrieved successfully"
+        },
+        "body_schema": {
+          "type": "object",
+          "required": ["success", "api_key", "message"],
+          "properties": {
+            "success": {"type": "boolean", "const": true},
+            "api_key": {"type": "string", "minLength": 32},
+            "message": {"type": "string"}
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.success == True",
+        "len(response.json.api_key) >= 32",
+        "response.json.message == 'API key retrieved successfully'"
+      ],
+      "post_validation": {
+        "description": "Verify consumer was created in APISIX",
+        "validation_request": {
+          "method": "GET",
+          "url": "http://localhost:9180/apisix/admin/consumers/test-behavior-user",
+          "headers": {
+            "X-API-KEY": "${ADMIN_KEY}"
+          }
+        },
+        "expected_validation": {
+          "status_code": 200,
+          "validation_rules": [
+            "response.status_code == 200",
+            "response.json.value.username == 'test-behavior-user'",
+            "'key-auth' in response.json.value.plugins"
+          ]
+        }
+      }
+    },
+    {
+      "test_id": "get_key_existing_user",
+      "name": "Get API Key - Existing User",
+      "description": "Verify get key operation returns existing key for user with credentials",
+      "prerequisite_setup": "get_key_new_user",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:3001/portal/get-key",
+        "headers": {
+          "X-User-Oid": "test-behavior-user",
+          "X-User-Name": "Behavior Test User",
+          "X-User-Email": "behavior@test.example.com",
+          "Content-Type": "application/json"
+        },
+        "body": null,
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "success": true,
+          "message": "API key retrieved successfully"
+        },
+        "body_comparison": "same_api_key_as_previous_test"
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.success == True",
+        "response.json.api_key == test_context.get_key_new_user.api_key"
+      ]
+    },
+    {
+      "test_id": "recycle_key_existing_user",
+      "name": "Recycle API Key - Existing User",
+      "description": "Verify recycle key operation generates new key and invalidates old one",
+      "prerequisite_setup": "get_key_existing_user",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:3001/portal/recycle-key",
+        "headers": {
+          "X-User-Oid": "test-behavior-user",
+          "X-User-Name": "Behavior Test User",
+          "X-User-Email": "behavior@test.example.com",
+          "Content-Type": "application/json"
+        },
+        "body": null,
+        "timeout": 20
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "success": true,
+          "message": "API key recycled successfully - previous key is now invalid"
+        },
+        "body_schema": {
+          "type": "object",
+          "required": ["success", "api_key", "message"],
+          "properties": {
+            "success": {"type": "boolean", "const": true},
+            "api_key": {"type": "string", "minLength": 32},
+            "message": {"type": "string"}
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.success == True",
+        "response.json.api_key != test_context.get_key_existing_user.api_key",
+        "len(response.json.api_key) >= 32"
+      ]
+    },
+    {
+      "test_id": "dev_admin_disabled_by_default",
+      "name": "Development Admin Routes Disabled by Default",
+      "description": "Verify development admin routes return 403 when DEV_MODE is false",
+      "environment_override": {
+        "DEV_MODE": "false"
+      },
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/dev/admin/",
+        "headers": {},
+        "body": null,
+        "timeout": 5
+      },
+      "expected_response": {
+        "status_code": 403,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "error": "Development mode not enabled"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 403",
+        "response.json.error == 'Development mode not enabled'"
+      ]
+    },
+    {
+      "test_id": "dev_admin_enabled",
+      "name": "Development Admin Dashboard Accessible",
+      "description": "Verify development admin dashboard loads when DEV_MODE is enabled",
+      "environment_requirements": {
+        "DEV_MODE": "true",
+        "DEV_ADMIN_PASSWORD": "test-password"
+      },
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/dev/admin/",
+        "headers": {},
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body_contains": [
+          "Development Admin Portal",
+          "DEVELOPMENT MODE ACTIVE",
+          "User Simulation",
+          "Test Users"
+        ]
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'text/html' in response.headers['content-type']",
+        "'Development Admin Portal' in response.text",
+        "'DEVELOPMENT MODE ACTIVE' in response.text"
+      ]
+    }
+  ],
+  "test_cleanup": {
+    "description": "Clean up test data after test suite completion",
+    "cleanup_requests": [
+      {
+        "description": "Delete test user consumer",
+        "method": "DELETE",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-behavior-user",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "ignore_errors": [404]
+      }
+    ]
+  },
+  "reporting": {
+    "format": "json",
+    "include_response_bodies": true,
+    "include_timing_data": true,
+    "generate_diff_on_failure": true,
+    "save_artifacts": ["request_logs", "response_bodies", "error_traces"]
+  }
+}

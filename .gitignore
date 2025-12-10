@@ -1,9 +1,9 @@
-# Environment files with sensitive keys
-.env
-admin.env
-.dev.env
-.test.env
+# Environment files with sensitive keys (moved to old/)
+# .env, admin.env, .dev.env, .test.env moved to old/
 bin/
+
+# Secrets directory (contains sensitive credentials)
+secrets/
 # APISIX source repository (external dependency)
 apisix-source-repo/
 
@@ -27,3 +27,4 @@ Thumbs.db
 # Claude Code plans (user-specific)
 .claude/
 2025-12-03_state.md
+.secrets/

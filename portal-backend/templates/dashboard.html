@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Service API Key Portal</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+        .user-info {
+            background-color: #e8f4f8;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #0066cc;
+        }
+        .user-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #0066cc;
+        }
+        .api-key-section {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .api-key-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .key-display {
+            background-color: #f1f3f4;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 1rem 0;
+            border: 1px solid #dadce0;
+        }
+        .key-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .no-key-message {
+            color: #6c757d;
+            font-style: italic;
+            margin: 1rem 0;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 0.5rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-warning {
+            background-color: #fd7e14;
+        }
+        .btn-warning:hover {
+            background-color: #e66310;
+        }
+        .success-message, .error-message {
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .copy-btn {
+            background-color: #28a745;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            margin-left: 0.5rem;
+        }
+        .copy-btn:hover {
+            background-color: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔑 Self-Service API Key Portal</h1>
+            <p>Manage your API access key for secure service integration</p>
+        </div>
+
+        <div class="user-info">
+            <h3>👤 Signed in as:</h3>
+            <p><strong>{{ user_identity.user_name }}</strong> ({{ user_identity.user_email }})</p>
+            <small>User ID: {{ user_identity.user_oid }}</small>
+        </div>
+
+        <div class="api-key-section">
+            <h3>🔐 Your API Key</h3>
+
+            <div id="messages"></div>
+
+            {% if has_key %}
+                <div class="key-display" id="keyDisplay">
+                    {{ current_key }}
+                    <button class="btn copy-btn" onclick="copyToClipboard('{{ current_key }}')">📋 Copy</button>
+                </div>
+
+                <div class="key-warning">
+                    <strong>⚠️ Important:</strong> This API key provides access to your services.
+                    Store it securely and never share it. If compromised, recycle it immediately.
+                </div>
+
+                <button class="btn btn-warning" onclick="recycleKey()" id="recycleBtn">
+                    🔄 Recycle Key
+                </button>
+                <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                    Recycling will invalidate the current key and generate a new one.
+                </small>
+            {% else %}
+                <div class="no-key-message">
+                    📝 You don't have an API key yet.
+                </div>
+
+                <button class="btn" onclick="getKey()" id="getKeyBtn">
+                    ✨ Get Key
+                </button>
+                <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+                    Generate your first API key to start using the services.
+                </small>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e9ecef; color: #6c757d; font-size: 0.9rem;">
+            <p><strong>Need help?</strong></p>
+            <ul>
+                <li>Each user gets exactly one API key</li>
+                <li>Use the "Get Key" button to create your first key</li>
+                <li>Use the "Recycle Key" button to rotate your key if needed</li>
+                <li>Include your API key in requests using the <code>X-API-Key</code> header</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(message, isError = false) {
+            const messagesDiv = document.getElementById('messages');
+            const messageClass = isError ? 'error-message' : 'success-message';
+            messagesDiv.innerHTML = `<div class="${messageClass}">${message}</div>`;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messagesDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function setLoading(isLoading) {
+            const container = document.querySelector('.container');
+            if (isLoading) {
+                container.classList.add('loading');
+            } else {
+                container.classList.remove('loading');
+            }
+        }
+
+        async function getKey() {
+            setLoading(true);
+
+            try {
+                const response = await fetch('/portal/get-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage(`✅ ${data.message}`);
+                    // Refresh page to show the new key
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showMessage(`❌ Error: ${data.error || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                showMessage(`❌ Network error: ${error.message}`, true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function recycleKey() {
+            if (!confirm('⚠️ Are you sure you want to recycle your API key?\n\nThis will invalidate your current key and generate a new one. Any applications using the old key will need to be updated.')) {
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch('/portal/recycle-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showMessage(`✅ ${data.message}`);
+                    // Refresh page to show the new key
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showMessage(`❌ Error: ${data.error || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                showMessage(`❌ Network error: ${error.message}`, true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showMessage('📋 API key copied to clipboard!');
+            }).catch(err => {
+                showMessage('❌ Failed to copy to clipboard', true);
+            });
+        }
+    </script>
+</body>
+</html>

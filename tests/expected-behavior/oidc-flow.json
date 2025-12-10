@@ -1,0 +1,314 @@
+{
+  "test_suite_name": "OIDC Flow Integration Tests",
+  "test_suite_version": "1.0.0",
+  "description": "Validates expected behavior of OIDC authentication flow through APISIX",
+  "environment": "development",
+  "prerequisites": {
+    "services_required": ["apisix-dev", "etcd-dev", "portal-backend-dev"],
+    "environment_variables": ["ADMIN_KEY", "OIDC_PROVIDER_NAME", "OIDC_CLIENT_ID"],
+    "provider_requirements": {
+      "entraid": ["ENTRAID_TENANT_ID", "ENTRAID_CLIENT_SECRET"],
+      "keycloak": ["KEYCLOAK_ADMIN_URL"]
+    }
+  },
+  "tests": [
+    {
+      "test_id": "apisix_health_check",
+      "name": "APISIX Gateway Health Check",
+      "description": "Verify APISIX gateway is responding",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9080/health",
+        "headers": {},
+        "body": null,
+        "timeout": 5
+      },
+      "expected_response": {
+        "status_code": 404,
+        "note": "APISIX returns 404 for unknown routes, indicating it's running"
+      },
+      "validation_rules": [
+        "response.status_code in [404, 200]"
+      ]
+    },
+    {
+      "test_id": "apisix_admin_api_access",
+      "name": "APISIX Admin API Access",
+      "description": "Verify APISIX Admin API is accessible with admin key",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/routes",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "total": ">=0",
+          "list": "array"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'list' in response.json",
+        "isinstance(response.json.list, list)"
+      ]
+    },
+    {
+      "test_id": "portal_route_redirect",
+      "name": "Portal Route OIDC Redirect",
+      "description": "Verify portal route redirects to OIDC provider for authentication",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9080/portal/",
+        "headers": {},
+        "body": null,
+        "timeout": 15,
+        "allow_redirects": false
+      },
+      "expected_response": {
+        "status_code": [302, 307],
+        "headers": {
+          "location": "contains_oidc_provider"
+        }
+      },
+      "validation_rules": [
+        "response.status_code in [302, 307]",
+        "'location' in response.headers",
+        "any(provider in response.headers['location'].lower() for provider in ['login.microsoftonline.com', 'keycloak'])"
+      ]
+    },
+    {
+      "test_id": "oidc_discovery_endpoint",
+      "name": "OIDC Discovery Endpoint Accessibility",
+      "description": "Verify OIDC discovery endpoint is accessible from container network",
+      "request": {
+        "method": "GET",
+        "url": "${OIDC_DISCOVERY_ENDPOINT}",
+        "headers": {},
+        "body": null,
+        "timeout": 30
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body_contains_keys": [
+          "authorization_endpoint",
+          "token_endpoint",
+          "userinfo_endpoint",
+          "jwks_uri"
+        ]
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'authorization_endpoint' in response.json",
+        "'token_endpoint' in response.json",
+        "'userinfo_endpoint' in response.json"
+      ]
+    },
+    {
+      "test_id": "portal_route_configuration",
+      "name": "Portal Route Configuration in APISIX",
+      "description": "Verify portal route is properly configured with OIDC plugin",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/routes",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "body_validation": "contains_portal_route"
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "any('portal' in str(route.get('uri', '')) for route in response.json.get('list', []))",
+        "any('openid-connect' in str(route.get('plugins', {})) for route in response.json.get('list', []))"
+      ],
+      "custom_validation": {
+        "name": "portal_route_has_oidc_plugin",
+        "description": "Check that portal route has openid-connect plugin configured"
+      }
+    },
+    {
+      "test_id": "callback_route_configuration",
+      "name": "OIDC Callback Route Configuration",
+      "description": "Verify OIDC callback route is configured in APISIX",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/routes",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "body_validation": "contains_callback_route"
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "any('callback' in str(route.get('uri', '')) for route in response.json.get('list', []))"
+      ]
+    },
+    {
+      "test_id": "oidc_plugin_configuration",
+      "name": "OIDC Plugin Configuration Validation",
+      "description": "Verify OIDC plugin is configured with correct parameters",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/routes",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200
+      },
+      "validation_rules": [
+        "response.status_code == 200"
+      ],
+      "custom_validation": {
+        "name": "validate_oidc_plugin_config",
+        "description": "Validate OIDC plugin configuration includes required parameters",
+        "checks": [
+          "client_id_matches_environment",
+          "discovery_endpoint_matches_environment",
+          "redirect_uri_configured",
+          "session_secret_configured"
+        ]
+      }
+    }
+  ],
+  "provider_specific_tests": {
+    "entraid": [
+      {
+        "test_id": "entraid_discovery_format",
+        "name": "EntraID Discovery Endpoint Format",
+        "description": "Verify EntraID discovery endpoint follows expected format",
+        "validation_rules": [
+          "'login.microsoftonline.com' in OIDC_DISCOVERY_ENDPOINT",
+          "'/v2.0/.well-known/openid-configuration' in OIDC_DISCOVERY_ENDPOINT"
+        ]
+      }
+    ],
+    "keycloak": [
+      {
+        "test_id": "keycloak_discovery_format",
+        "name": "Keycloak Discovery Endpoint Format",
+        "description": "Verify Keycloak discovery endpoint follows expected format",
+        "validation_rules": [
+          "'keycloak' in OIDC_DISCOVERY_ENDPOINT.lower()",
+          "'/realms/' in OIDC_DISCOVERY_ENDPOINT",
+          "'/.well-known/openid-connect/configuration' in OIDC_DISCOVERY_ENDPOINT"
+        ]
+      },
+      {
+        "test_id": "keycloak_admin_access",
+        "name": "Keycloak Admin Console Access",
+        "description": "Verify Keycloak admin console is accessible",
+        "request": {
+          "method": "GET",
+          "url": "http://localhost:8080/admin/",
+          "headers": {},
+          "body": null,
+          "timeout": 10,
+          "allow_redirects": false
+        },
+        "expected_response": {
+          "status_code": [200, 302]
+        },
+        "validation_rules": [
+          "response.status_code in [200, 302]"
+        ]
+      }
+    ]
+  },
+  "integration_flow_test": {
+    "test_id": "complete_oidc_portal_flow",
+    "name": "Complete OIDC Portal Flow (Manual Validation)",
+    "description": "Documents expected behavior for complete OIDC authentication flow",
+    "manual_steps": [
+      {
+        "step": 1,
+        "action": "Navigate to http://localhost:9080/portal/",
+        "expected": "Browser redirected to OIDC provider login page"
+      },
+      {
+        "step": 2,
+        "action": "Complete OIDC authentication",
+        "expected": "Browser redirected back to portal with user headers injected"
+      },
+      {
+        "step": 3,
+        "action": "Portal dashboard loads",
+        "expected": "User sees personalized dashboard with current API key status"
+      },
+      {
+        "step": 4,
+        "action": "Generate API key",
+        "expected": "New API key created and displayed to user"
+      },
+      {
+        "step": 5,
+        "action": "Recycle API key",
+        "expected": "New API key generated, old key invalidated"
+      }
+    ],
+    "validation_artifacts": [
+      "apisix_access_logs",
+      "portal_backend_logs",
+      "oidc_provider_logs"
+    ]
+  },
+  "error_scenarios": [
+    {
+      "test_id": "invalid_oidc_config",
+      "name": "Invalid OIDC Configuration Handling",
+      "description": "Test behavior with invalid OIDC configuration",
+      "scenarios": [
+        "invalid_client_id",
+        "invalid_discovery_endpoint",
+        "network_timeout_to_oidc_provider",
+        "invalid_redirect_uri"
+      ]
+    }
+  ],
+  "performance_benchmarks": {
+    "portal_response_time": {
+      "description": "Portal route response time under normal conditions",
+      "expected_max": "2000ms",
+      "measurement_method": "curl_timing"
+    },
+    "oidc_redirect_time": {
+      "description": "Time from portal request to OIDC redirect",
+      "expected_max": "1000ms",
+      "measurement_method": "curl_timing"
+    }
+  },
+  "test_cleanup": {
+    "description": "No cleanup required for OIDC flow tests",
+    "cleanup_requests": []
+  },
+  "reporting": {
+    "format": "json",
+    "include_response_headers": true,
+    "include_redirect_chain": true,
+    "generate_network_timing": true,
+    "save_artifacts": ["curl_verbose_output", "timing_data", "redirect_logs"]
+  }
+}
