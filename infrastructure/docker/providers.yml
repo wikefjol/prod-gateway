@@ -1,0 +1,78 @@
+# Provider-Specific Services
+# Services specific to different OIDC providers
+
+services:
+  # Keycloak OIDC Provider
+  keycloak-dev:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak-${ENVIRONMENT:-dev}
+    profiles: ["keycloak"]
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+    ports:
+      - "8080:8080"
+    networks:
+      - apisix
+    command: ["start-dev"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Keycloak Setup - Configures realms and clients
+  keycloak-setup:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak-setup-${ENVIRONMENT:-dev}
+    profiles: ["keycloak"]
+    depends_on:
+      keycloak-dev:
+        condition: service_healthy
+    networks:
+      - apisix
+    volumes:
+      - ../../scripts/providers/keycloak:/setup:ro
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KEYCLOAK_ADMIN_URL=${KEYCLOAK_ADMIN_URL:-http://keycloak-dev:8080}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-apisix-portal}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI}
+    command: ["/bin/bash", "/setup/configure.sh"]
+    restart: "no"
+
+  # Portal Backend (if running locally)
+  portal-backend:
+    image: node:18-alpine
+    container_name: portal-backend-${ENVIRONMENT:-dev}
+    profiles: ["portal-backend"]
+    networks:
+      - apisix
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+      - OIDC_DISCOVERY_ENDPOINT=${OIDC_DISCOVERY_ENDPOINT}
+    volumes:
+      - ../../portal-backend:/app:ro
+    working_dir: /app
+    command: ["npm", "run", "dev"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  apisix:
+    driver: bridge

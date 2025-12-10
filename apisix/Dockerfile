@@ -3,12 +3,17 @@ FROM apache/apisix:3.14.1-debian
 # Switch to root to install packages
 USER root
 
-# for envsubst
+# for envsubst and network debugging
 RUN apt-get update && apt-get install -y --no-install-recommends gettext-base \
+    curl \
+    dnsutils \
+    iputils-ping \
+    telnet \
     && rm -rf /var/lib/apt/lists/*
 
 # config templates + entrypoint
 COPY config-template.yaml /usr/local/apisix/conf/config-template.yaml
+COPY config-dev-template.yaml /usr/local/apisix/conf/config-dev-template.yaml
 COPY config-dev-static.yaml /usr/local/apisix/conf/config-dev-static.yaml
 COPY config-test-static.yaml /usr/local/apisix/conf/config-test-static.yaml
 COPY entrypoint-simple.sh /docker-entrypoint-custom.sh

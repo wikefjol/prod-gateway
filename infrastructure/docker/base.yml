@@ -1,0 +1,134 @@
+# Base Infrastructure Services
+# Core services required by all environments
+
+networks:
+  apisix:
+    driver: bridge
+
+volumes:
+  etcd_data:
+    driver: local
+  apisix_logs:
+    driver: local
+
+services:
+  # etcd - Configuration store for APISIX
+  etcd-dev:
+    image: bitnamilegacy/etcd:3.5.11
+    container_name: etcd-${ENVIRONMENT:-dev}
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-${ENVIRONMENT:-dev}:2379
+    volumes:
+      - etcd_data:/bitnami/etcd
+    networks:
+      - apisix
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # APISIX Gateway - API Gateway with OIDC support
+  apisix-dev:
+    build:
+      context: ../../apisix
+      dockerfile: Dockerfile
+    container_name: apisix-${ENVIRONMENT:-dev}
+    depends_on:
+      etcd-dev:
+        condition: service_healthy
+    networks:
+      - apisix
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    ports:
+      - "${APISIX_NODE_LISTEN:-9080}:9080"
+      - "${APISIX_ADMIN_PORT:-9180}:9180"
+    environment:
+      - CUSTOM_PROFILE=${ENVIRONMENT:-dev}
+      - ADMIN_KEY=${ADMIN_KEY}
+      - VIEWER_KEY=${VIEWER_KEY}
+      - ETCD_HOST=${ETCD_HOST}
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - apisix_logs:/usr/local/apisix/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /usr/local/apisix/logs/nginx.pid && kill -0 $(cat /usr/local/apisix/logs/nginx.pid) 2>/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  # Configuration Loader - Applies OIDC routes and configurations
+  loader-dev:
+    image: curlimages/curl:latest
+    container_name: apisix-loader-${ENVIRONMENT:-dev}
+    depends_on:
+      apisix-dev:
+        condition: service_healthy
+    networks:
+      - apisix
+    volumes:
+      - ../../:/opt/apisix-gateway:ro
+    user: "${UID:-364274}:${GID:-364274}"
+    environment:
+      # Core configuration
+      - ADMIN_KEY=${ADMIN_KEY}
+      - APISIX_ADMIN_API=${APISIX_ADMIN_API}
+      - APISIX_ADMIN_API_CONTAINER=${APISIX_ADMIN_API_CONTAINER}
+
+      # OIDC configuration (loaded from provider config)
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      - OIDC_DISCOVERY_ENDPOINT=${OIDC_DISCOVERY_ENDPOINT}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI}
+      - OIDC_SESSION_SECRET=${OIDC_SESSION_SECRET}
+      - OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME}
+
+      # Backend configuration
+      - PORTAL_BACKEND_HOST=${PORTAL_BACKEND_HOST:-portal-backend:3000}
+      - BACKEND_HOST=${BACKEND_HOST:-app-backend-dev:3000}
+
+      # Legacy variables for backward compatibility
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-${OIDC_CLIENT_ID}}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET:-${OIDC_CLIENT_SECRET}}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID:-}
+      - REDIRECT_URI=${REDIRECT_URI:-${OIDC_REDIRECT_URI}}
+    command: ["/bin/sh", "/opt/apisix-gateway/scripts/bootstrap/bootstrap.sh"]
+    restart: "no"
+
+  # Portal Backend - Self-Service API Key Management
+  portal-backend:
+    build:
+      context: ../../portal-backend
+      dockerfile: Dockerfile
+    container_name: portal-backend-${ENVIRONMENT:-dev}
+    depends_on:
+      apisix-dev:
+        condition: service_healthy
+    networks:
+      - apisix
+    ports:
+      - "${PORTAL_BACKEND_PORT:-3001}:3000"
+    environment:
+      # Core APISIX integration
+      - ADMIN_KEY=${ADMIN_KEY}
+      - APISIX_ADMIN_API_CONTAINER=${APISIX_ADMIN_API_CONTAINER}
+      - APISIX_ADMIN_API=${APISIX_ADMIN_API}
+
+      # Environment context
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PORTAL_BACKEND_HOST=${PORTAL_BACKEND_HOST:-portal-backend:3000}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

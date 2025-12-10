@@ -1,0 +1,18 @@
+# Self-Service API Key Portal Backend Dependencies
+
+# Web framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# HTTP client for APISIX Admin API
+requests==2.31.0
+
+# Production WSGI server
+gunicorn==21.2.0
+
+# Security and utilities (already available in Python 3.7+)
+# secrets - built-in for CSPRNG
+# logging - built-in
+# datetime - built-in
+# json - built-in
+# typing - built-in

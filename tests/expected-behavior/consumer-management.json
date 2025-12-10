@@ -1,0 +1,503 @@
+{
+  "test_suite_name": "APISIX Consumer Management Behavior Tests",
+  "test_suite_version": "1.0.0",
+  "description": "Validates expected behavior of APISIX Consumer and Credential management",
+  "environment": "development",
+  "prerequisites": {
+    "services_required": ["apisix-dev", "etcd-dev"],
+    "environment_variables": ["ADMIN_KEY"],
+    "test_data": {
+      "test_consumer": {
+        "username": "test-consumer-behavior",
+        "desc": "Test consumer for behavior validation",
+        "labels": {
+          "source": "behavior-test",
+          "created_at": "2025-12-09T00:00:00.000000"
+        }
+      },
+      "test_api_key": "test-api-key-behavior-validation-12345"
+    }
+  },
+  "tests": [
+    {
+      "test_id": "consumer_creation",
+      "name": "Consumer Creation via Admin API",
+      "description": "Verify consumer can be created successfully via APISIX Admin API",
+      "prerequisite_cleanup": {
+        "description": "Ensure test consumer doesn't exist",
+        "cleanup_request": {
+          "method": "DELETE",
+          "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+          "headers": {
+            "X-API-KEY": "${ADMIN_KEY}"
+          },
+          "ignore_errors": [404]
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "test-consumer-behavior",
+          "desc": "Test consumer for behavior validation",
+          "labels": {
+            "source": "behavior-test",
+            "created_at": "2025-12-09T00:00:00.000000"
+          }
+        },
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 201,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "value": {
+            "username": "test-consumer-behavior",
+            "desc": "Test consumer for behavior validation"
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code in [200, 201]",
+        "response.json.value.username == 'test-consumer-behavior'",
+        "response.json.value.desc == 'Test consumer for behavior validation'"
+      ]
+    },
+    {
+      "test_id": "consumer_retrieval",
+      "name": "Consumer Retrieval via Admin API",
+      "description": "Verify consumer can be retrieved successfully",
+      "prerequisite_setup": "consumer_creation",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "value": {
+            "username": "test-consumer-behavior",
+            "desc": "Test consumer for behavior validation"
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.value.username == 'test-consumer-behavior'",
+        "'labels' in response.json.value",
+        "response.json.value.labels.source == 'behavior-test'"
+      ]
+    },
+    {
+      "test_id": "consumer_key_auth_plugin",
+      "name": "Consumer Key-Auth Plugin Configuration",
+      "description": "Verify key-auth plugin can be configured on consumer",
+      "prerequisite_setup": "consumer_retrieval",
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "test-consumer-behavior",
+          "desc": "Test consumer for behavior validation",
+          "labels": {
+            "source": "behavior-test",
+            "created_at": "2025-12-09T00:00:00.000000"
+          },
+          "plugins": {
+            "key-auth": {
+              "key": "test-api-key-behavior-validation-12345"
+            }
+          }
+        },
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "value": {
+            "username": "test-consumer-behavior",
+            "plugins": {
+              "key-auth": {
+                "key": "test-api-key-behavior-validation-12345"
+              }
+            }
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.value.username == 'test-consumer-behavior'",
+        "'plugins' in response.json.value",
+        "'key-auth' in response.json.value.plugins",
+        "response.json.value.plugins['key-auth']['key'] == 'test-api-key-behavior-validation-12345'"
+      ]
+    },
+    {
+      "test_id": "consumer_plugin_retrieval",
+      "name": "Consumer Plugin Configuration Retrieval",
+      "description": "Verify consumer plugin configuration can be retrieved",
+      "prerequisite_setup": "consumer_key_auth_plugin",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 200,
+        "body": {
+          "value": {
+            "username": "test-consumer-behavior",
+            "plugins": {
+              "key-auth": {
+                "key": "test-api-key-behavior-validation-12345"
+              }
+            }
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'plugins' in response.json.value",
+        "'key-auth' in response.json.value.plugins",
+        "response.json.value.plugins['key-auth']['key'] == 'test-api-key-behavior-validation-12345'"
+      ]
+    },
+    {
+      "test_id": "consumer_plugin_update",
+      "name": "Consumer Plugin Update (Key Recycling)",
+      "description": "Verify consumer key-auth plugin can be updated with new key",
+      "prerequisite_setup": "consumer_plugin_retrieval",
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "test-consumer-behavior",
+          "desc": "Test consumer for behavior validation",
+          "labels": {
+            "source": "behavior-test",
+            "created_at": "2025-12-09T00:00:00.000000"
+          },
+          "plugins": {
+            "key-auth": {
+              "key": "test-api-key-recycled-behavior-67890"
+            }
+          }
+        },
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 200,
+        "body": {
+          "value": {
+            "username": "test-consumer-behavior",
+            "plugins": {
+              "key-auth": {
+                "key": "test-api-key-recycled-behavior-67890"
+              }
+            }
+          }
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "response.json.value.plugins['key-auth']['key'] == 'test-api-key-recycled-behavior-67890'",
+        "response.json.value.plugins['key-auth']['key'] != 'test-api-key-behavior-validation-12345'"
+      ]
+    },
+    {
+      "test_id": "consumer_deletion",
+      "name": "Consumer Deletion via Admin API",
+      "description": "Verify consumer can be deleted successfully",
+      "prerequisite_setup": "consumer_plugin_update",
+      "request": {
+        "method": "DELETE",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 15
+      },
+      "expected_response": {
+        "status_code": 200,
+        "body": {
+          "deleted": "test-consumer-behavior"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 200",
+        "'deleted' in response.json or response.json.get('key') == 'test-consumer-behavior'"
+      ]
+    },
+    {
+      "test_id": "consumer_not_found_after_deletion",
+      "name": "Consumer Not Found After Deletion",
+      "description": "Verify consumer returns 404 after deletion",
+      "prerequisite_setup": "consumer_deletion",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 404,
+        "body": {
+          "error_msg": "key not found"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 404",
+        "'not found' in response.json.get('error_msg', '').lower()"
+      ]
+    }
+  ],
+  "error_scenarios": [
+    {
+      "test_id": "invalid_admin_key",
+      "name": "Consumer Operations with Invalid Admin Key",
+      "description": "Verify consumer operations fail with invalid admin key",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers",
+        "headers": {
+          "X-API-KEY": "invalid-admin-key-12345"
+        },
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 401,
+        "body": {
+          "error_msg": "Invalid API key"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 401",
+        "'invalid' in response.json.get('error_msg', '').lower() or 'unauthorized' in response.json.get('error_msg', '').lower()"
+      ]
+    },
+    {
+      "test_id": "missing_admin_key",
+      "name": "Consumer Operations without Admin Key",
+      "description": "Verify consumer operations fail without admin key",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers",
+        "headers": {},
+        "body": null,
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 401,
+        "body": {
+          "error_msg": "Missing API key"
+        }
+      },
+      "validation_rules": [
+        "response.status_code == 401",
+        "'missing' in response.json.get('error_msg', '').lower() or 'required' in response.json.get('error_msg', '').lower()"
+      ]
+    },
+    {
+      "test_id": "invalid_consumer_data",
+      "name": "Consumer Creation with Invalid Data",
+      "description": "Verify consumer creation fails with invalid data format",
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-invalid",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "invalid_field": "invalid_value",
+          "nested": {
+            "deeply": {
+              "invalid": "structure"
+            }
+          }
+        },
+        "timeout": 10
+      },
+      "expected_response": {
+        "status_code": 400,
+        "note": "APISIX should validate consumer data format"
+      },
+      "validation_rules": [
+        "response.status_code >= 400",
+        "response.status_code < 500"
+      ]
+    }
+  ],
+  "etcd_integration": [
+    {
+      "test_id": "etcd_health_check",
+      "name": "ETCD Health Check",
+      "description": "Verify ETCD is healthy and accessible",
+      "request": {
+        "method": "EXEC",
+        "command": "docker exec etcd-dev etcdctl endpoint health",
+        "timeout": 10
+      },
+      "expected_response": {
+        "exit_code": 0,
+        "stdout_contains": "is healthy"
+      },
+      "validation_rules": [
+        "response.exit_code == 0",
+        "'healthy' in response.stdout.lower()"
+      ]
+    },
+    {
+      "test_id": "consumer_data_in_etcd",
+      "name": "Consumer Data Persistence in ETCD",
+      "description": "Verify consumer data is properly stored in ETCD",
+      "prerequisite_setup": {
+        "create_test_consumer": {
+          "method": "PUT",
+          "url": "http://localhost:9180/apisix/admin/consumers/etcd-test-consumer",
+          "headers": {
+            "X-API-KEY": "${ADMIN_KEY}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "username": "etcd-test-consumer",
+            "desc": "Test consumer for ETCD validation"
+          }
+        }
+      },
+      "request": {
+        "method": "EXEC",
+        "command": "docker exec etcd-dev etcdctl get --prefix /apisix/consumers/",
+        "timeout": 10
+      },
+      "expected_response": {
+        "exit_code": 0,
+        "stdout_contains": "etcd-test-consumer"
+      },
+      "validation_rules": [
+        "response.exit_code == 0",
+        "'etcd-test-consumer' in response.stdout"
+      ],
+      "cleanup": {
+        "method": "DELETE",
+        "url": "http://localhost:9180/apisix/admin/consumers/etcd-test-consumer",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        }
+      }
+    }
+  ],
+  "performance_tests": [
+    {
+      "test_id": "consumer_creation_performance",
+      "name": "Consumer Creation Performance",
+      "description": "Measure consumer creation response time",
+      "performance_target": {
+        "max_response_time": "1000ms",
+        "success_rate": "100%"
+      },
+      "test_iterations": 5,
+      "request_template": {
+        "method": "PUT",
+        "url": "http://localhost:9180/apisix/admin/consumers/perf-test-{iteration}",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "perf-test-{iteration}",
+          "desc": "Performance test consumer {iteration}"
+        }
+      },
+      "cleanup_after_test": true
+    },
+    {
+      "test_id": "consumer_retrieval_performance",
+      "name": "Consumer Retrieval Performance",
+      "description": "Measure consumer retrieval response time",
+      "performance_target": {
+        "max_response_time": "500ms",
+        "success_rate": "100%"
+      },
+      "test_iterations": 10,
+      "prerequisite_setup": "create_performance_test_consumers",
+      "request_template": {
+        "method": "GET",
+        "url": "http://localhost:9180/apisix/admin/consumers/perf-test-1",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        }
+      }
+    }
+  ],
+  "test_cleanup": {
+    "description": "Clean up all test consumers and data",
+    "cleanup_requests": [
+      {
+        "description": "Delete test consumer",
+        "method": "DELETE",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-consumer-behavior",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "ignore_errors": [404]
+      },
+      {
+        "description": "Delete invalid test consumer",
+        "method": "DELETE",
+        "url": "http://localhost:9180/apisix/admin/consumers/test-invalid",
+        "headers": {
+          "X-API-KEY": "${ADMIN_KEY}"
+        },
+        "ignore_errors": [404]
+      },
+      {
+        "description": "Clean up performance test consumers",
+        "method": "SCRIPT",
+        "script": "cleanup-performance-consumers.sh",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "reporting": {
+    "format": "json",
+    "include_response_bodies": true,
+    "include_timing_data": true,
+    "generate_performance_graphs": true,
+    "save_artifacts": ["etcd_dumps", "consumer_state_snapshots", "performance_metrics"]
+  }
+}

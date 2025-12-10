@@ -1,0 +1,4 @@
+NAMES                STATUS                       IMAGE
+apisix-dev           Up 6 minutes (healthy)       docker-apisix-dev
+portal-backend-dev   Up 39 minutes (healthy)      docker-portal-backend
+etcd-dev             Up About an hour (healthy)   bitnamilegacy/etcd:3.5.11
