@@ -147,19 +147,8 @@ parse_arguments() {
 validate_environment() {
     log_info "Validating test environment..."
 
-    # Check required environment variables
-    local missing_vars=()
-    for var in ADMIN_KEY; do
-        if [[ -z "${!var:-}" ]]; then
-            missing_vars+=("$var")
-        fi
-    done
-
-    if [[ ${#missing_vars[@]} -gt 0 ]]; then
-        log_error "Missing required environment variables: ${missing_vars[*]}"
-        log_error "Please run: source scripts/core/environment.sh && setup_environment <provider>"
-        return 1
-    fi
+    # Load and validate environment (centralized DRY pattern)
+    ensure_environment
 
     # Check if services are running
     local required_services=("apisix-dev" "etcd-dev" "portal-backend-dev")

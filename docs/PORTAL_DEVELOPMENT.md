@@ -388,9 +388,11 @@ docker exec -it portal-backend-dev bash
 # Check environment variables
 docker exec portal-backend-dev env | grep -E "(ADMIN|APISIX|PORTAL)"
 
-# Check network connectivity
-docker exec portal-backend-dev ping apisix-dev
-docker exec portal-backend-dev curl -v http://apisix-dev:9180/health
+# Check network connectivity to APISIX admin API
+docker exec portal-backend-dev curl -f -s http://apisix-dev:9180/apisix/admin/routes -H "X-API-KEY: $ADMIN_KEY" >/dev/null && echo "APISIX admin API: accessible" || echo "APISIX admin API: unreachable"
+
+# Verbose test for detailed debugging
+docker exec portal-backend-dev curl -v http://apisix-dev:9180/apisix/admin/routes -H "X-API-KEY: $ADMIN_KEY"
 ```
 
 #### Log Analysis

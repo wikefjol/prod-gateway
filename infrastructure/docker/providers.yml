@@ -48,30 +48,6 @@ services:
     command: ["/bin/bash", "/setup/configure.sh"]
     restart: "no"
 
-  # Portal Backend (if running locally)
-  portal-backend:
-    image: node:18-alpine
-    container_name: portal-backend-${ENVIRONMENT:-dev}
-    profiles: ["portal-backend"]
-    networks:
-      - apisix
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
-      - OIDC_DISCOVERY_ENDPOINT=${OIDC_DISCOVERY_ENDPOINT}
-    volumes:
-      - ../../portal-backend:/app:ro
-    working_dir: /app
-    command: ["npm", "run", "dev"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
 networks:
   apisix:

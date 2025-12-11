@@ -314,9 +314,35 @@ show_current_config() {
     echo "============================="
 }
 
+# Centralized environment loader for script consistency
+ensure_environment() {
+    # Smart environment loading that works for all scripts
+    local provider="${OIDC_PROVIDER_NAME:-${1:-keycloak}}"
+    local environment="${ENVIRONMENT:-${2:-dev}}"
+
+    # Skip if already loaded (performance optimization)
+    if [[ -n "${OIDC_CLIENT_ID:-}" && -n "${ADMIN_KEY:-}" ]]; then
+        log_debug "Environment already loaded for provider: $provider"
+        return 0
+    fi
+
+    log_debug "Loading environment for provider: $provider, environment: $environment"
+
+    # Load environment with error handling
+    if ! setup_environment "$provider" "$environment"; then
+        log_error "Failed to load environment for provider: $provider"
+        log_error "Available providers: keycloak, entraid"
+        log_error "Ensure secrets are configured in secrets/$provider-$environment.env"
+        return 1
+    fi
+
+    log_debug "Environment loaded successfully"
+    return 0
+}
+
 # Export functions for use by other scripts
 export -f log_info log_success log_warning log_error log_debug
 export -f require_vars load_shared_config load_provider_config load_secrets
 export -f validate_provider_config validate_entraid_config validate_keycloak_config
-export -f setup_environment generate_compose_command
+export -f setup_environment generate_compose_command ensure_environment
 export -f list_available_providers show_current_config

@@ -8,16 +8,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Load environment functions if available
+# Load and ensure environment (centralized DRY pattern)
 if [[ -f "$PROJECT_ROOT/scripts/core/environment.sh" ]]; then
     # shellcheck source=../core/environment.sh
     source "$PROJECT_ROOT/scripts/core/environment.sh"
+    ensure_environment
 else
     # Fallback logging functions
     log_info() { echo "ℹ️  $*"; }
     log_success() { echo "✅ $*"; }
     log_warning() { echo "⚠️  $*"; }
     log_error() { echo "❌ $*" >&2; }
+    log_error "Environment functions not available - some features may not work"
 fi
 
 # Configuration from environment

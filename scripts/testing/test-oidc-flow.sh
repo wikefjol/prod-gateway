@@ -398,31 +398,16 @@ test_keycloak_specific() {
 
 # Main test execution
 main() {
+    # Load environment first (centralized DRY pattern)
+    ensure_environment
+
     log_info "Starting OIDC Flow Integration Tests"
     log_info "APISIX Gateway: $APISIX_GATEWAY"
     log_info "APISIX Admin: $APISIX_ADMIN"
     log_info "Provider: ${OIDC_PROVIDER_NAME:-unknown}"
     echo
 
-    # Environment validation
-    log_info "Validating environment variables..."
-
-    local required_vars=("ADMIN_KEY")
-    local missing_vars=()
-
-    for var in "${required_vars[@]}"; do
-        if [[ -z "${!var:-}" ]]; then
-            missing_vars+=("$var")
-        fi
-    done
-
-    if [[ ${#missing_vars[@]} -gt 0 ]]; then
-        log_error "Missing required environment variables: ${missing_vars[*]}"
-        log_error "Please run: source scripts/core/environment.sh && setup_environment <provider>"
-        exit 1
-    fi
-
-    log_success "Environment validation passed"
+    log_success "Environment loaded and validated successfully"
     echo
 
     # Run tests
