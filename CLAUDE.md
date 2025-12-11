@@ -128,6 +128,13 @@ curl -X POST \
      http://localhost:3001/portal/get-key
 ```
 
+Development admin interface (when DEV_MODE=true):
+```bash
+# Access development admin UI at http://localhost:3001/dev/admin/
+# Requires DEV_ADMIN_PASSWORD for authentication
+# Provides user simulation, key management testing, and reset capabilities
+```
+
 ## Architecture Overview
 
 ### Core Infrastructure Components
@@ -338,11 +345,25 @@ curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
 curl -I http://localhost:9080/portal/
 ```
 
-## Files to Never Modify
+## Important File Patterns and Conventions
 
+### Files to Never Modify
 - `old/` directory: Contains archived legacy implementation
 - `apisix-source-repo/`: Apache APISIX source code (read-only reference)
 - `secrets/` files: Should be updated by admin, not in version control
+
+### Key Implementation Patterns
+- **Configuration Hierarchy**: Always use `scripts/core/environment.sh` for environment loading
+- **Container Naming**: Follow `{service}-{environment}` pattern (e.g., `apisix-dev`, `portal-backend-dev`)
+- **Script Standards**: All scripts use `set -euo pipefail` and include logging functions
+- **Docker Compose**: Modular compose files with service profiles for clean separation
+- **Error Handling**: Comprehensive error checking with specific error messages for troubleshooting
+
+### Portal Backend Code Structure
+- **Main Application**: `portal-backend/src/app.py` - Flask app with APISIX Admin API integration
+- **Templates**: `portal-backend/templates/` - HTML templates for dashboard UI
+- **Architecture Pattern**: Clean separation between user identity resolution, consumer management, and credential operations
+- **Security Pattern**: Never log full API keys, only fingerprints using `APIKey.get_fingerprint()`
 
 ## Key Environment Variables
 
@@ -353,3 +374,5 @@ Essential variables loaded by the environment system:
 - `OIDC_DISCOVERY_ENDPOINT`: Provider discovery URL
 - `APISIX_NODE_LISTEN`: Gateway port (default: 9080)
 - `APISIX_ADMIN_PORT`: Admin API port (default: 9180)
+- `APISIX_ADMIN_API_CONTAINER`: Internal container endpoint for portal backend
+- `DEV_MODE`, `DEV_ADMIN_PASSWORD`: Development mode settings (optional)

@@ -4,6 +4,17 @@ A clean, modular Infrastructure-as-Code (IAC) implementation of APISIX Gateway w
 
 ## Quick Start
 
+### If you are working on remote: 
+```bash
+ssh -f -N \
+  -L 8080:localhost:8080 \
+  -L 9080:localhost:9080 \
+  -L 9180:localhost:9180 \
+  -L 3000:localhost:3000 \
+  -o ServerAliveInterval=30 \
+  <cid>@lamassu.ita.chalmers.se
+```
+
 ### Start with Default Provider (Keycloak)
 ```bash
 ./scripts/lifecycle/start.sh
@@ -281,8 +292,10 @@ docker exec portal-backend-dev curl -H "X-API-KEY: $ADMIN_KEY" \
 # Verify ADMIN_KEY is correctly set
 docker exec portal-backend-dev printenv ADMIN_KEY
 
-# Check network connectivity
-docker exec portal-backend-dev ping apisix-dev
+# Check network connectivity to APISIX admin API
+# Note: Using curl instead of ping because portal backend container doesn't include ping
+# and HTTP connectivity is what matters for API operations
+docker exec portal-backend-dev curl -f -s http://apisix-dev:9180/apisix/admin/routes -H "X-API-KEY: $ADMIN_KEY" >/dev/null && echo "APISIX connectivity: OK" || echo "APISIX connectivity: FAILED"
 ```
 
 #### Issue: Consumer Creation Fails

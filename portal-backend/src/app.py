@@ -14,6 +14,7 @@ import os
 import secrets
 import logging
 import json
+import base64
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -343,18 +344,63 @@ class PortalService:
         Raises:
             ValueError: If required headers are missing
         """
-        user_oid = headers.get('X-User-Oid')
-        if not user_oid:
-            raise ValueError("Missing X-User-Oid header - user not authenticated")
+        userinfo_header = headers.get('X-Userinfo')
+        id_token_header = headers.get('X-Id-Token')
 
-        user_identity = {
-            'user_oid': user_oid,
-            'user_name': headers.get('X-User-Name', 'Unknown User'),
-            'user_email': headers.get('X-User-Email', 'unknown@example.com')
-        }
+        # Try X-Userinfo first (preferred method)
+        if userinfo_header:
+            try:
+                # Decode the userinfo JSON
+                userinfo = json.loads(userinfo_header)
 
-        logger.info(f"Resolved user identity: {user_identity['user_oid']} ({user_identity['user_name']})")
-        return user_identity
+                # Extract user identity from claims
+                user_oid = userinfo.get('oid') or userinfo.get('sub')
+                if not user_oid:
+                    raise ValueError("Missing 'oid' or 'sub' claim in userinfo")
+
+                user_identity = {
+                    'user_oid': user_oid,
+                    'user_name': userinfo.get('name', 'Unknown User'),
+                    'user_email': userinfo.get('email') or userinfo.get('preferred_username', 'unknown@example.com')
+                }
+
+                logger.info(f"Resolved user identity from X-Userinfo: {user_identity['user_oid']} ({user_identity['user_name']})")
+                return user_identity
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid JSON in X-Userinfo header: {e}, trying X-Id-Token fallback")
+
+        # Fallback to X-Id-Token (base64 JSON decoding)
+        if id_token_header:
+            try:
+                # APISIX sends the ID token as base64-encoded JSON payload (not full JWT)
+                # Add padding if needed for base64 decoding
+                payload_b64 = id_token_header
+                payload_b64 += '=' * (4 - len(payload_b64) % 4)
+                payload_json = base64.b64decode(payload_b64).decode('utf-8')
+
+                # Parse token payload
+                jwt_claims = json.loads(payload_json)
+
+                # Extract user identity from JWT claims
+                user_oid = jwt_claims.get('oid') or jwt_claims.get('sub')
+                if not user_oid:
+                    raise ValueError("Missing 'oid' or 'sub' claim in ID token")
+
+                user_identity = {
+                    'user_oid': user_oid,
+                    'user_name': jwt_claims.get('name', 'Unknown User'),
+                    'user_email': jwt_claims.get('email') or jwt_claims.get('preferred_username', 'unknown@example.com')
+                }
+
+                logger.info(f"Resolved user identity from X-Id-Token: {user_identity['user_oid']} ({user_identity['user_name']})")
+                return user_identity
+
+            except (ValueError, json.JSONDecodeError, IndexError) as e:
+                logger.error(f"Failed to decode X-Id-Token: {e}")
+
+        # If both methods fail
+        raise ValueError("Missing X-Userinfo header and unable to decode X-Id-Token - user not authenticated")
 
     def ensure_consumer_exists(self, user_identity: Dict[str, str]) -> Dict[str, Any]:
         """Ensure Consumer exists for the user, create if missing
@@ -478,6 +524,17 @@ def health_check():
 def portal_dashboard():
     """Main portal dashboard - shows current API key status"""
     try:
+        # TEMPORARY DEBUG: Log all headers
+        logger.info("=== DEBUG: All received headers ===")
+        for header_name, header_value in request.headers:
+            if header_name.startswith('X-'):
+                # For X-Userinfo, show first 100 chars to avoid logging sensitive data
+                if header_name == 'X-Userinfo':
+                    logger.info(f"{header_name}: {header_value[:100]}...")
+                else:
+                    logger.info(f"{header_name}: {header_value}")
+        logger.info("=== END DEBUG HEADERS ===")
+
         # Extract user identity from headers
         user_identity = portal_service.resolve_user_identity(dict(request.headers))
 
