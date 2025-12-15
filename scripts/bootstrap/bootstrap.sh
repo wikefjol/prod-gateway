@@ -23,7 +23,7 @@ log_error() {
 
 # Validation - ensure required variables are set
 validate_environment() {
-    local required_vars="ADMIN_KEY OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_DISCOVERY_ENDPOINT OIDC_REDIRECT_URI OIDC_SESSION_SECRET OIDC_PROVIDER_NAME"
+    local required_vars="ADMIN_KEY OIDC_CLIENT_ID OIDC_CLIENT_SECRET OIDC_DISCOVERY_ENDPOINT OIDC_REDIRECT_URI OIDC_SESSION_SECRET OIDC_PROVIDER_NAME OPENAI_API_KEY ANTHROPIC_API_KEY LITELLM_KEY"
 
     for var in $required_vars; do
         eval "value=\${$var:-}"
@@ -186,6 +186,116 @@ configure_oidc_routes() {
     configure_callback_route "$apisix_admin"
 }
 
+# Configure AI Provider routes
+configure_ai_routes() {
+    # Intelligent context detection for single source of truth
+    local network_context
+    network_context=$(detect_network_context)
+
+    local apisix_admin
+    if [ "$network_context" = "container" ]; then
+        apisix_admin="${APISIX_ADMIN_API_CONTAINER}"
+    else
+        apisix_admin="${APISIX_ADMIN_API}"
+    fi
+
+    log_info "Configuring AI provider routes"
+    log_info "Using APISIX Admin API ($network_context context): $apisix_admin"
+
+    # Configure OpenAI route
+    configure_openai_route "$apisix_admin"
+
+    # Configure Anthropic route
+    configure_anthropic_route "$apisix_admin"
+
+    # Configure LiteLLM route
+    configure_litellm_route "$apisix_admin"
+}
+
+configure_openai_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/openai-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "OpenAI route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying OpenAI provider chat route..."
+
+    # Substitute environment variables in template
+    local body
+    body=$(sed "s|\$OPENAI_API_KEY|$OPENAI_API_KEY|g" "$template_file")
+
+    # Apply the route configuration
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$body" \
+        "$apisix_admin/routes/provider-openai-chat" >/dev/null; then
+        log_success "OpenAI provider chat route configured successfully"
+    else
+        log_error "Failed to configure OpenAI provider chat route"
+        return 1
+    fi
+}
+
+configure_anthropic_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/anthropic-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "Anthropic route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying Anthropic provider chat route..."
+
+    # Substitute environment variables in template
+    local body
+    body=$(sed "s|\$ANTHROPIC_API_KEY|$ANTHROPIC_API_KEY|g" "$template_file")
+
+    # Apply the route configuration
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$body" \
+        "$apisix_admin/routes/provider-anthropic-chat" >/dev/null; then
+        log_success "Anthropic provider chat route configured successfully"
+    else
+        log_error "Failed to configure Anthropic provider chat route"
+        return 1
+    fi
+}
+
+configure_litellm_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/litellm-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "LiteLLM route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying LiteLLM provider chat route..."
+
+    # Substitute environment variables in template
+    local body
+    body=$(sed "s|\$LITELLM_KEY|$LITELLM_KEY|g" "$template_file")
+
+    # Apply the route configuration
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$body" \
+        "$apisix_admin/routes/provider-litellm-chat" >/dev/null; then
+        log_success "LiteLLM provider chat route configured successfully"
+    else
+        log_error "Failed to configure LiteLLM provider chat route"
+        return 1
+    fi
+}
+
 configure_portal_route() {
     local apisix_admin="$1"
     local template_file="/opt/apisix-gateway/apisix/oidc-generic-route.json"
@@ -317,6 +427,7 @@ main() {
     wait_for_apisix
     wait_for_provider
     configure_oidc_routes
+    configure_ai_routes
     verify_routes
 
     echo ""

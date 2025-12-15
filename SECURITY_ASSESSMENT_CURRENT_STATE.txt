@@ -1,0 +1,261 @@
+APISIX GATEWAY SECURITY ASSESSMENT - CURRENT STATE
+================================================
+Generated: 2024-12-15 12:30 UTC
+Assessment for External Deployment Preparation
+
+OVERVIEW
+========
+This document provides a comprehensive security assessment of the current APISIX Gateway setup,
+answering 10 critical questions about network exposure, authentication flows, and configuration
+state to inform pre-publication hardening and domain cutover decisions.
+
+======================================================================================
+
+QUESTION 1: PORT BINDINGS AND BIND ADDRESSES
+============================================
+
+COMMAND EXECUTED:
+> ss -tulpen | grep -E ":9080|:9180|:3001|:8080|:2379|:80|:443"
+
+RESULTS:
+tcp   LISTEN 0      4096         0.0.0.0:9080       0.0.0.0:*    (APISIX Gateway)
+tcp   LISTEN 0      4096         0.0.0.0:3001       0.0.0.0:*    (Portal Backend)
+tcp   LISTEN 0      4096       127.0.0.1:9180       0.0.0.0:*    (APISIX Admin API - localhost only)
+tcp   LISTEN 0      4096            [::]:9080          [::]:*    (IPv6)
+tcp   LISTEN 0      4096            [::]:3001          [::]:*    (IPv6)
+
+ASSESSMENT:
+✅ SECURE: Admin API (9180) correctly bound to localhost only (127.0.0.1)
+✅ EXPECTED: Gateway (9080) and Portal (3001) bound to all interfaces for external access
+❌ NO TLS: No services listening on ports 80 or 443
+
+======================================================================================
+
+QUESTION 2: DOCKER PORT MAPPINGS
+================================
+
+COMMAND EXECUTED:
+> docker ps --format 'table {{.Names}}\t{{.Ports}}'
+
+RESULTS:
+NAMES                PORTS
+portal-backend-dev   0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+apisix-dev           0.0.0.0:9080->9080/tcp, [::]:9080->9080/tcp, 127.0.0.1:9180->9180/tcp, 9443/tcp
+etcd-dev             2379-2380/tcp (internal only)
+
+ASSESSMENT:
+✅ SECURE: Admin API port mapping restricts external access (127.0.0.1:9180->9180/tcp)
+✅ EXPECTED: Gateway and Portal Backend exposed for external access
+✅ SECURE: etcd ports not exposed to host network (container network only)
+📝 NOTE: Port 9443 (HTTPS) configured but not used without TLS termination
+
+======================================================================================
+
+QUESTION 3: ADMIN API ACCESSIBILITY
+===================================
+
+COMMANDS EXECUTED:
+> curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:9180/apisix/admin/routes -H "X-API-KEY: b690..."
+> curl -sS -o /dev/null -w "%{http_code}\n" http://129.16.222.8:9180/apisix/admin/routes -H "X-API-KEY: b690..."
+
+RESULTS:
+- Localhost access (127.0.0.1:9180): HTTP 200 ✅
+- External IP access (129.16.222.8:9180): Connection refused (curl error 7) ✅
+
+ASSESSMENT:
+✅ CRITICAL SECURITY: Admin API properly secured - localhost access only
+✅ VERIFIED: External access blocked at network level (not just firewall)
+✅ FUNCTIONAL: Admin API working correctly for internal container communication
+
+======================================================================================
+
+QUESTION 4: PUBLIC ENTRYPOINT CONFIGURATION
+===========================================
+
+COMMANDS EXECUTED:
+> ss -tulpen | grep -E ":80|:443"
+> systemctl list-units --type=service --state=active | grep -E "nginx|apache|httpd"
+
+RESULTS:
+- No services listening on port 80 or 443
+- No nginx, apache, or httpd services running
+- Current public entrypoints: Direct access to 9080 (APISIX) and 3001 (Portal)
+
+ASSESSMENT:
+❌ NO TLS TERMINATION: No reverse proxy or web server handling HTTPS
+❌ NO HTTP REDIRECT: No automatic HTTP→HTTPS redirect in place
+📝 CURRENT STATE: Users must access services directly via http://host:9080 and http://host:3001
+
+======================================================================================
+
+QUESTION 5: TLS TERMINATION AND HTTPS REDIRECT
+==============================================
+
+COMMANDS EXECUTED:
+> systemctl list-units | grep -E "nginx|apache"
+> ss -tulpen | grep ":443"
+
+RESULTS:
+- No TLS termination services running
+- No HTTPS listeners on port 443
+- No HTTP→HTTPS redirect mechanisms in place
+
+ASSESSMENT:
+❌ NO TLS: No TLS termination configured
+❌ NO REDIRECT: No HTTP→HTTPS redirect policy
+⚠️  SECURITY RISK: All traffic transmitted in plaintext
+📝 REQUIRED: TLS termination must be implemented before public deployment
+
+======================================================================================
+
+QUESTION 6: CERTIFICATE MANAGEMENT
+==================================
+
+COMMANDS EXECUTED:
+> which certbot && certbot certificates
+> systemctl list-timers | grep -i cert
+
+RESULTS:
+- Certbot not found or no certificates configured
+- No certificate renewal timers active
+
+ASSESSMENT:
+❌ NO CERT MANAGEMENT: No automated certificate management in place
+❌ NO RENEWAL: No certificate renewal automation
+📝 REQUIRED: Certificate management solution needed before public deployment
+
+======================================================================================
+
+QUESTION 7: PORTAL BACKEND DIRECT ACCESS
+========================================
+
+COMMAND EXECUTED:
+> curl -sS -o /dev/null -w "%{http_code}\n" http://129.16.222.8:3001/portal/
+
+RESULTS:
+- External access to portal backend: HTTP 401 (Unauthorized)
+
+ASSESSMENT:
+✅ AUTHENTICATION ENFORCED: Portal backend correctly rejects unauthenticated requests
+⚠️  EXTERNALLY ACCESSIBLE: Portal backend reachable from internet but protected
+📝 BEHAVIOR: Direct access bypasses OIDC flow, returns 401 without user headers
+📝 PRODUCTION RISK: Direct portal access should be blocked in production
+
+======================================================================================
+
+QUESTION 8: DEV-MODE FEATURES STATUS
+====================================
+
+COMMANDS EXECUTED:
+> docker ps | grep -E "debug|toolkit|http-client"
+> docker inspect portal-backend-dev | jq '.[0].Config.Env' | grep -E "DEV_MODE|DEV_ADMIN"
+
+RESULTS:
+- No debug containers running (apisix-debug-toolkit, apisix-http-client not found)
+- Portal backend DEV_MODE status: Unable to verify (no accessible environment variables)
+
+ASSESSMENT:
+✅ NO DEBUG CONTAINERS: Debug toolkit containers not running
+⚠️  UNKNOWN DEV_MODE: Cannot verify if development features are enabled in portal
+📝 RECOMMENDATION: Explicitly disable DEV_MODE in production environment
+
+======================================================================================
+
+QUESTION 9: APISIX PLUGINS ON PUBLIC ROUTES
+===========================================
+
+COMMAND EXECUTED:
+> curl -sS -H "X-API-KEY: b690..." http://localhost:9180/apisix/admin/routes
+
+RESULTS (SANITIZED):
+Route: oidc-auth-callback (/v1/auth/oidc/callback)
+- Methods: GET, POST
+- Plugins: openid-connect
+- Purpose: Legacy OIDC callback
+
+Route: portal-oidc-route (/portal/*)
+- Methods: GET, POST
+- Plugins: openid-connect (with user header injection)
+- Purpose: Main portal interface
+
+Route: provider-anthropic-chat (/v1/providers/anthropic/chat)
+- Methods: POST
+- Plugins: key-auth, proxy-rewrite
+- Purpose: Anthropic AI API proxy
+
+Route: provider-litellm-chat (/v1/providers/litellm/chat)
+- Methods: POST
+- Plugins: key-auth, proxy-rewrite
+- Purpose: LiteLLM API proxy
+
+Route: provider-openai-chat (/v1/providers/openai/chat)
+- Methods: POST
+- Plugins: key-auth, proxy-rewrite
+- Purpose: OpenAI API proxy
+
+ASSESSMENT:
+✅ AUTHENTICATION: Proper plugin configuration (openid-connect for portal, key-auth for APIs)
+❌ NO RATE LIMITING: No rate-limit plugins configured on any routes
+❌ NO IP RESTRICTIONS: No IP whitelist/blacklist plugins configured
+⚠️  SECURITY GAP: Rate limiting should be implemented before public deployment
+
+======================================================================================
+
+QUESTION 10: OIDC PROVIDER CONFIGURATION
+========================================
+
+COMMAND EXECUTED:
+> source scripts/core/environment.sh && setup_environment "entraid" "dev"
+
+RESULTS:
+OIDC_PROVIDER_NAME: entraid
+OIDC_DISCOVERY_ENDPOINT: https://login.microsoftonline.com/29147a65-536d-43f9-b802-e0a1b5cf9dbf/v2.0/.well-known/openid-configuration
+OIDC_REDIRECT_URI: http://localhost:9080/portal/callback
+OIDC_CLIENT_ID: a8c920fe-3b30-4c77-aef7-17d85a656ea3
+
+APISIX Route Configuration (from admin API):
+- Portal route redirect_uri: "http://localhost:9080/portal/callback"
+- Callback route discovery: "https://login.microsoftonline.com/29147a65-536d-43f9-b802-e0a1b5cf9dbf/v2.0/.well-known/openid-configuration"
+
+ASSESSMENT:
+❌ LOCALHOST REDIRECT: Redirect URI still configured for localhost
+❌ DOMAIN MISMATCH: Configuration does not match intended public domain
+📝 REQUIRED CHANGES:
+  - Update OIDC_REDIRECT_URI to https://PUBLIC-DOMAIN/portal/callback
+  - Update EntraID app registration with new redirect URI
+  - Implement HTTPS before domain cutover
+
+======================================================================================
+
+SECURITY SUMMARY & RECOMMENDATIONS
+===================================
+
+CURRENT SECURITY POSTURE:
+✅ CRITICAL: Admin API properly secured (localhost only)
+✅ GOOD: Authentication plugins properly configured
+✅ GOOD: Container network isolation working
+⚠️  MAJOR GAP: No TLS termination or HTTPS
+⚠️  MAJOR GAP: No rate limiting on public endpoints
+❌ BLOCKER: OIDC configuration still points to localhost
+
+IMMEDIATE REQUIRED ACTIONS FOR PUBLIC DEPLOYMENT:
+1. **TLS Implementation**: Deploy TLS termination (nginx/traefik + Let's Encrypt)
+2. **HTTP→HTTPS Redirect**: Implement automatic redirect from port 80 to 443
+3. **OIDC Reconfiguration**: Update redirect URIs for public domain
+4. **Rate Limiting**: Configure rate-limit plugins on all public routes
+5. **Portal Backend**: Block direct external access to port 3001
+6. **Certificate Management**: Set up automated certificate renewal
+
+RECOMMENDED ARCHITECTURE FOR PUBLIC DEPLOYMENT:
+[Internet] → [TLS Proxy :443] → [APISIX :9080] → [Backend Services]
+- TLS proxy handles certificates and HTTPS termination
+- APISIX provides authentication and API key validation
+- Direct access to admin API (9180) and portal backend (3001) blocked externally
+
+RISK ASSESSMENT:
+- HIGH: Current setup transmits all data in plaintext
+- MEDIUM: No rate limiting allows potential DoS attacks
+- LOW: Admin API properly secured against external access
+
+======================================================================================
+END OF ASSESSMENT

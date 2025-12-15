@@ -48,7 +48,7 @@ services:
       - 1.1.1.1
     ports:
       - "${APISIX_NODE_LISTEN:-9080}:9080"
-      - "${APISIX_ADMIN_PORT:-9180}:9180"
+      - "127.0.0.1:${APISIX_ADMIN_PORT:-9180}:9180"
     environment:
       - CUSTOM_PROFILE=${ENVIRONMENT:-dev}
       - ADMIN_KEY=${ADMIN_KEY}

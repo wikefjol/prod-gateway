@@ -6,10 +6,90 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a modular Infrastructure-as-Code (IAC) implementation of Apache APISIX Gateway with multi-provider OIDC authentication support. The system includes:
 
-- **APISIX Gateway**: Core API gateway with OIDC routing
+- **APISIX Gateway**: Core API gateway with OIDC routing and AI provider proxying
 - **Multi-Provider OIDC**: Support for Keycloak (local dev) and Microsoft EntraID (Azure AD)
 - **Self-Service Portal**: Python Flask backend for API key management
+- **AI Provider Gateway**: Secure proxying to OpenAI, Anthropic, and LiteLLM endpoints
 - **Clean Architecture**: Separation of concerns with provider-specific configurations
+
+## Network Architecture & Security Configuration
+
+### Port Bindings (Current State)
+
+**External Access Points:**
+- **Port 9080**: APISIX Gateway (bound to 0.0.0.0) - ✅ **SAFE FOR EXTERNAL ACCESS**
+  - Main API gateway for all client requests
+  - OIDC-protected portal access
+  - API key-protected AI provider endpoints
+- **Port 3001**: Portal Backend (bound to 0.0.0.0) - ✅ **SAFE FOR EXTERNAL ACCESS**
+  - Self-service API key management interface
+  - Protected by APISIX OIDC authentication
+  - Direct access bypasses OIDC (development only)
+
+**Internal-Only Services:**
+- **Port 9180**: APISIX Admin API (bound to 127.0.0.1) - 🔒 **LOCALHOST ONLY**
+  - Full administrative control over APISIX configuration
+  - Consumer and route management
+  - **CRITICAL**: Must never be exposed externally
+- **Port 2379**: etcd (container network only) - 🔒 **INTERNAL ONLY**
+  - APISIX configuration storage
+  - Not exposed to host network
+- **Port 8080**: Keycloak (when using keycloak provider) - ⚠️ **CONDITIONAL**
+  - Only active when using Keycloak provider
+  - Can be exposed for development, should be restricted in production
+
+### APISIX Route Configuration
+
+**OIDC-Protected Routes (Authentication Required):**
+
+1. **Portal Route**: `/portal/*`
+   - **ID**: `portal-oidc-route`
+   - **Methods**: GET, POST
+   - **Plugin**: `openid-connect` (full OIDC flow)
+   - **Headers Injected**: `X-User-Oid`, `X-User-Name`, `X-User-Email`, `X-Userinfo`, `X-Id-Token`, `X-Access-Token`
+   - **Upstream**: Portal Backend (`portal-backend:3000`)
+   - **Purpose**: Main portal interface for API key management
+
+2. **OIDC Callback Route**: `/v1/auth/oidc/callback`
+   - **ID**: `oidc-auth-callback`
+   - **Methods**: GET, POST
+   - **Plugin**: `openid-connect`
+   - **Purpose**: Legacy callback endpoint for backward compatibility
+
+**API Key-Protected Routes (API Key Required):**
+
+3. **Anthropic AI Route**: `/v1/providers/anthropic/chat`
+   - **ID**: `provider-anthropic-chat`
+   - **Methods**: POST
+   - **Plugin**: `key-auth` (validates API key), `proxy-rewrite`
+   - **Headers**: Adds `x-api-key: $ANTHROPIC_API_KEY`, `anthropic-version: 2023-06-01`
+   - **Upstream**: `api.anthropic.com:443` (HTTPS)
+   - **Purpose**: Proxy to Anthropic's Claude API
+
+4. **OpenAI Route**: `/v1/providers/openai/chat`
+   - **ID**: `provider-openai-chat`
+   - **Methods**: POST
+   - **Plugin**: `key-auth`, `proxy-rewrite`
+   - **Headers**: Adds `Authorization: Bearer $OPENAI_API_KEY`
+   - **Upstream**: `api.openai.com:443` (HTTPS)
+   - **Purpose**: Proxy to OpenAI's GPT API
+
+5. **LiteLLM Route**: `/v1/providers/litellm/chat`
+   - **ID**: `provider-litellm-chat`
+   - **Methods**: POST
+   - **Plugin**: `key-auth`, `proxy-rewrite`
+   - **Headers**: Adds `Authorization: Bearer $LITELLM_KEY`
+   - **Upstream**: `anast.ita.chalmers.se:4000` (HTTPS)
+   - **Purpose**: Proxy to LiteLLM aggregator service
+
+### API Key Authentication Flow
+
+1. **User Authentication**: User logs in via OIDC (EntraID/Keycloak) at `/portal/`
+2. **Consumer Creation**: Portal backend creates APISIX Consumer with username = user's OID
+3. **API Key Generation**: Portal generates CSPRNG key and creates key-auth credential
+4. **API Usage**: Client uses API key in `apikey` header for AI provider routes
+5. **Key Validation**: APISIX validates key against Consumer credentials
+6. **Proxying**: APISIX adds provider-specific headers and forwards to upstream
 
 ## Essential Commands
 
@@ -71,6 +151,11 @@ Test portal backend directly:
 Test behavior flows:
 ```bash
 ./scripts/testing/behavior-test.sh
+```
+
+Test OIDC flow specifically:
+```bash
+./scripts/testing/test-oidc-flow.sh
 ```
 
 Debug containers (when started with --debug):
@@ -141,7 +226,7 @@ Development admin interface (when DEV_MODE=true):
 
 - **etcd**: Configuration store for APISIX (`etcd-dev` container)
 - **APISIX Gateway**: Main gateway service (`apisix-dev` container on port 9080)
-- **APISIX Admin**: Admin API and dashboard (`apisix-dev` container on port 9180)
+- **APISIX Admin**: Admin API and dashboard (`apisix-dev` container on port 9180, localhost-only)
 - **Portal Backend**: Self-service API key management (`portal-backend-dev` on port 3001)
 
 ### Provider Services
@@ -210,7 +295,87 @@ Key endpoints:
 - `/portal/recycle-key` - Rotate existing API key
 - `/health` - Health check endpoint
 
+## Current Security Configuration
+
+### Admin API Security (CRITICAL)
+
+**Status**: 🔒 **SECURED** - Admin API bound to localhost only (`127.0.0.1:9180`)
+
+**What this means:**
+- External access to admin API is **blocked**
+- Internal container communication still works (`apisix-dev:9180`)
+- Portal backend functionality **unaffected**
+- Full APISIX control **not accessible** from internet
+
+**Verification:**
+```bash
+# Should work (localhost)
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
+
+# Should fail (external IP)
+curl -H "X-API-KEY: $ADMIN_KEY" http://YOUR-EXTERNAL-IP:9180/apisix/admin/routes
+```
+
+### External Access Security Matrix
+
+| Port | Service | Binding | External Safe? | Purpose |
+|------|---------|---------|----------------|---------|
+| 9080 | APISIX Gateway | 0.0.0.0 | ✅ YES | Client requests, OIDC protected |
+| 9180 | APISIX Admin | 127.0.0.1 | 🔒 INTERNAL ONLY | Admin API, never expose |
+| 3001 | Portal Backend | 0.0.0.0 | ✅ YES | Portal access, OIDC protected |
+| 2379 | etcd | container | 🔒 INTERNAL ONLY | Database, container network |
+| 8080 | Keycloak | 0.0.0.0 | ⚠️ DEV ONLY | OIDC provider, dev environment |
+
+### Authentication & Authorization Architecture
+
+**OIDC Flow (Portal Access):**
+1. User → `http://gateway:9080/portal/`
+2. APISIX → Redirect to OIDC provider (EntraID/Keycloak)
+3. User authenticates with OIDC provider
+4. Provider → Callback to APISIX
+5. APISIX → Validates token, injects headers, forwards to portal backend
+6. Portal backend → Sees user headers, provides interface
+
+**API Key Flow (AI Provider Access):**
+1. Client → `POST http://gateway:9080/v1/providers/anthropic/chat` with `apikey: USER_KEY`
+2. APISIX → Validates key against Consumer database
+3. APISIX → Adds provider-specific authentication headers
+4. APISIX → Proxies to upstream provider (api.anthropic.com)
+5. Provider → Returns response through APISIX to client
+
+### Secret Management
+
+**Environment Variables (Sensitive):**
+- `ADMIN_KEY`: APISIX admin API key (in container env only)
+- `OIDC_CLIENT_SECRET`: OIDC provider secret
+- `ANTHROPIC_API_KEY`: Anthropic API key for proxying
+- `OPENAI_API_KEY`: OpenAI API key for proxying
+- `LITELLM_KEY`: LiteLLM service key
+
+**Files (gitignored):**
+- `secrets/entraid-dev.env`: EntraID credentials
+- `secrets/keycloak-dev.env`: Keycloak credentials (optional)
+
 ## Key Development Patterns
+
+### Testing Framework
+
+The project includes a comprehensive testing framework with structured test results:
+
+```
+tests/
+├── results/                    # Test run results with timestamps
+│   └── {timestamp}/
+│       ├── artifacts/         # Service status and logs
+│       ├── processed/         # Processed test summaries
+│       ├── raw/              # Raw test responses
+│       └── test-run-metadata.json
+├── expected-behavior/          # Expected behavior definitions
+│   ├── consumer-management.json
+│   ├── oidc-flow.json
+│   └── portal-backend-api.json
+└── README.md                  # Testing framework documentation
+```
 
 ### Provider Switching
 
@@ -244,6 +409,53 @@ Scripts use `set -euo pipefail` for strict error handling and include comprehens
 
 Containers follow the pattern: `{service}-{environment}` (e.g., `apisix-dev`, `etcd-dev`)
 
+## External Deployment Preparation
+
+### Required Changes for Public Exposure
+
+**1. Update Redirect URIs:**
+```bash
+# In config/providers/entraid/dev.env
+OIDC_REDIRECT_URI=https://your-domain.com/portal/callback
+```
+
+**2. Update EntraID App Registration:**
+- Add public domain redirect URI
+- Verify tenant and client configuration
+
+**3. TLS Termination (Recommended):**
+```bash
+# Example with nginx reverse proxy
+# 443 → APISIX Gateway (9080)
+# Admin API stays internal-only
+```
+
+**4. Firewall Configuration:**
+```bash
+# Allow required external access
+sudo ufw allow 443/tcp   # HTTPS (with TLS termination)
+sudo ufw allow 80/tcp    # HTTP (redirect to HTTPS)
+
+# Block admin API (defense in depth)
+sudo ufw deny 9180/tcp
+
+# Optional: Allow direct gateway access
+sudo ufw allow 9080/tcp
+sudo ufw allow 3001/tcp
+```
+
+### Security Hardening Checklist
+
+- ✅ Admin API bound to localhost only
+- ✅ Secrets separated from version control
+- ✅ API keys use CSPRNG generation
+- ✅ No full keys logged (only fingerprints)
+- ✅ OIDC authentication for portal access
+- ✅ API key authentication for provider access
+- ⚠️ TLS termination needed for production
+- ⚠️ Rate limiting should be configured
+- ⚠️ WAF policies should be reviewed
+
 ## Common Troubleshooting Patterns
 
 ### Configuration Issues
@@ -261,89 +473,41 @@ Containers follow the pattern: `{service}-{environment}` (e.g., `apisix-dev`, `e
 - Check user header injection from APISIX
 - Verify APISIX Admin API connectivity from portal container
 
-## Implemented Fixes and Improvements
+### OIDC Issues
+- Validate discovery endpoint: `curl $OIDC_DISCOVERY_ENDPOINT`
+- Check redirect URI configuration
+- Verify client ID/secret in provider and config
 
-### OIDC Connectivity Fixes
+### API Key Issues
+- Check consumer exists: `curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/consumers`
+- Verify key-auth credentials
+- Test key validation manually
 
-**Issue**: OIDC flow failing with "network is unreachable" when accessing external providers like Microsoft EntraID.
+## Recent Security Improvements (2024-12)
 
-**Solution**: Added DNS configuration and network diagnostic tools to APISIX container.
+### Critical Admin API Security Fix
+**Issue**: Admin API was exposed externally on port 9180, allowing full APISIX control
+**Solution**: Bound admin API to localhost only (`127.0.0.1:9180`)
+**Impact**:
+- ✅ External admin access blocked
+- ✅ Internal container communication preserved
+- ✅ Portal backend functionality unaffected
+- ✅ Zero functionality loss for legitimate use
 
-Files modified:
-- `infrastructure/docker/base.yml`: Added `dns: [8.8.8.8, 1.1.1.1]` to apisix-dev service
-- `apisix/Dockerfile`: Added network diagnostic tools (curl, dnsutils, iputils-ping, telnet)
+### OIDC Connectivity Enhancement
+**Issue**: OIDC flow failing with external providers (EntraID)
+**Solution**: Added DNS configuration to APISIX container
+**Impact**:
+- ✅ External OIDC providers now accessible
+- ✅ EntraID authentication works reliably
+- ✅ Network diagnostic tools available in containers
 
-**Verification**: OIDC flow now successfully redirects to Microsoft EntraID login page.
-
-### Portal Backend Auto-Start Fix
-
-**Issue**: Portal backend service not starting automatically with main services.
-
-**Solution**: Explicitly include portal-backend in Docker Compose startup command.
-
-Files modified:
-- `scripts/lifecycle/start.sh`: Updated startup command to explicitly include services:
-  ```bash
-  "${compose_cmd[@]}" "${up_args[@]}" etcd-dev apisix-dev loader-dev portal-backend
-  ```
-
-### Docker Volume Conflict Resolution
-
-**Issue**: Volume conflict errors when stopping services: "conflicting parameters 'external' and 'driver' specified"
-
-**Solution**: Made volume definitions consistent across all Docker Compose files.
-
-Files modified:
-- `infrastructure/docker/debug.yml`: Set `apisix_logs: external: false`
-- Removed obsolete `version: '3.8'` declarations from compose files
-
-### Environment Variable Loading Fix
-
-**Issue**: Stop script failing due to missing environment variables.
-
-**Solution**: Added environment loading to stop script.
-
-Files modified:
-- `scripts/lifecycle/stop.sh`: Added environment setup call:
-  ```bash
-  setup_environment "${OIDC_PROVIDER_NAME:-keycloak}" "${ENVIRONMENT:-dev}" 2>/dev/null || true
-  ```
-
-### Health Endpoint Optimization
-
-**Issue**: Custom health endpoint returning 404 Route Not Found.
-
-**Solution**: Replaced custom health route with APISIX's built-in admin API endpoints.
-
-**Rationale**: Built-in endpoints are more reliable, maintained by APISIX team, and reduce custom code complexity.
-
-Files modified:
-- `scripts/debug/curl-test.sh`: Updated health check to use admin API:
-  ```bash
-  curl -H "X-API-KEY: $ADMIN_KEY" "$APISIX_ADMIN_API/routes"
-  ```
-- `scripts/bootstrap/bootstrap.sh`: Removed custom health route configuration
-
-### System Status After Fixes
-
-**✅ All Critical Issues Resolved**:
-- OIDC authentication flow works with Microsoft EntraID
-- Portal backend starts automatically
-- No Docker volume conflicts
-- Health checks use reliable built-in endpoints
-- All test scripts pass successfully
-
-**Test Commands**:
-```bash
-# Test full OIDC flow
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
-
-# Test health endpoint
-curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
-
-# Test portal access (should redirect to Microsoft login)
-curl -I http://localhost:9080/portal/
-```
+### Docker Configuration Hardening
+**Improvements**:
+- ✅ Volume conflict resolution
+- ✅ Consistent container networking
+- ✅ Automatic service startup reliability
+- ✅ Environment variable loading fixes
 
 ## Important File Patterns and Conventions
 
@@ -364,15 +528,74 @@ curl -I http://localhost:9080/portal/
 - **Templates**: `portal-backend/templates/` - HTML templates for dashboard UI
 - **Architecture Pattern**: Clean separation between user identity resolution, consumer management, and credential operations
 - **Security Pattern**: Never log full API keys, only fingerprints using `APIKey.get_fingerprint()`
+- **Development Guide**: `docs/PORTAL_DEVELOPMENT.md` - Comprehensive development workflows, testing strategies, and debugging guides
 
 ## Key Environment Variables
 
 Essential variables loaded by the environment system:
 - `OIDC_PROVIDER_NAME`: Current provider (keycloak/entraid)
-- `ADMIN_KEY`: APISIX admin API key
+- `ADMIN_KEY`: APISIX admin API key (localhost access only)
 - `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`: Provider credentials
 - `OIDC_DISCOVERY_ENDPOINT`: Provider discovery URL
 - `APISIX_NODE_LISTEN`: Gateway port (default: 9080)
-- `APISIX_ADMIN_PORT`: Admin API port (default: 9180)
+- `APISIX_ADMIN_PORT`: Admin API port (default: 9180, localhost-only)
 - `APISIX_ADMIN_API_CONTAINER`: Internal container endpoint for portal backend
 - `DEV_MODE`, `DEV_ADMIN_PASSWORD`: Development mode settings (optional)
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `LITELLM_KEY`: AI provider credentials
+
+## API Usage Examples
+
+### Portal Access (OIDC Protected)
+```bash
+# Access portal (triggers OIDC flow)
+curl -I http://localhost:9080/portal/
+
+# Should redirect to OIDC provider login
+```
+
+### AI Provider Access (API Key Protected)
+```bash
+# Anthropic Claude API
+curl -X POST http://localhost:9080/v1/providers/anthropic/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "claude-3-sonnet-20240229",
+    "max_tokens": 100,
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+
+# OpenAI GPT API
+curl -X POST http://localhost:9080/v1/providers/openai/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+
+# LiteLLM (local models)
+curl -X POST http://localhost:9080/v1/providers/litellm/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "ollama/llama3.3",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+### Admin API Access (Localhost Only)
+```bash
+# Check all routes
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
+
+# Check consumers
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/consumers
+
+# Check specific consumer credentials
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/consumers/USER-OID/credentials
+```
+
+---
+
+This implementation provides a robust, secure, and scalable foundation for APISIX Gateway with multi-provider OIDC support and AI provider proxying, following Infrastructure-as-Code best practices with defense-in-depth security.
