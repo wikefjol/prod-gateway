@@ -9,9 +9,11 @@ Internet → Apache (443/80) → APISIX Gateway (127.0.0.1:9080) → Portal/APIs
 ```
 
 ## Prerequisites
-- Domain `lamassu.ita.chalmers.se` resolves to this server's public IP
+- Domain `lamassu.ita.chalmers.se` resolves to this server's public IPv4 address
+- If IPv6 is configured, ensure AAAA record exists and IPv6 connectivity works, or remove AAAA record
 - Ports 80 and 443 allowed through firewall (Phase 1 complete)
-- APISIX Gateway running on localhost:9080 (Phase 1 complete)
+- APISIX Gateway running on localhost:9080 only (Phase 1 complete)
+- Portal backend has no external port binding (Phase 1 complete)
 
 ## Installation Commands
 
@@ -47,7 +49,7 @@ sudo systemctl reload apache2
 ### 4. Obtain SSL Certificate with Let's Encrypt
 ```bash
 # Important: This requires the domain to resolve to this server's public IP
-sudo certbot --apache -d lamassu.ita.chalmers.se --non-interactive --agree-tos --email admin@ita.chalmers.se
+sudo certbot --apache --redirect -d lamassu.ita.chalmers.se --non-interactive --agree-tos --email admin@ita.chalmers.se
 
 # Verify certificate installation
 sudo certbot certificates
@@ -56,7 +58,12 @@ sudo certbot certificates
 ### 5. Test Auto-Renewal
 ```bash
 sudo certbot renew --dry-run
+
+# Check renewal timer (may vary by system)
 sudo systemctl status certbot.timer
+# Alternative check if systemd timer not found:
+# sudo systemctl list-timers | grep -i certbot
+# ls -la /etc/cron.d/certbot
 ```
 
 ## Configuration Details
