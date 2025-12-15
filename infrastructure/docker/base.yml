@@ -47,7 +47,7 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     ports:
-      - "${APISIX_NODE_LISTEN:-9080}:9080"
+      - "127.0.0.1:${APISIX_NODE_LISTEN:-9080}:9080"
       - "127.0.0.1:${APISIX_ADMIN_PORT:-9180}:9180"
     environment:
       - CUSTOM_PROFILE=${ENVIRONMENT:-dev}
@@ -114,8 +114,10 @@ services:
         condition: service_healthy
     networks:
       - apisix
-    ports:
-      - "${PORTAL_BACKEND_PORT:-3001}:3000"
+    # Phase 1: Attack Surface Reduction - Removed external port binding
+    # Portal backend now only accessible via APISIX reverse proxy
+    # ports:
+    #   - "${PORTAL_BACKEND_PORT:-3001}:3000"
     environment:
       # Core APISIX integration
       - ADMIN_KEY=${ADMIN_KEY}
