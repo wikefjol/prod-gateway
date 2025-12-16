@@ -25,7 +25,7 @@ apisix:
 etcd:
   host:
     - "${ETCD_HOST}"
-  prefix: "/apisix-${ENVIRONMENT}"
+  prefix: "/apisix"
   timeout: 30
 
 plugins:
@@ -36,6 +36,8 @@ plugins:
   - hmac-auth
   - openid-connect
   - consumer-restriction
+  - redirect
+  - serverless-pre-function
   # - cost_meter
 
 plugin_attr:

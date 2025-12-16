@@ -212,6 +212,35 @@ configure_ai_routes() {
     configure_litellm_route "$apisix_admin"
 }
 
+# Configure UX routes
+configure_ux_routes() {
+    # Intelligent context detection for single source of truth
+    local network_context
+    network_context=$(detect_network_context)
+
+    local apisix_admin
+    if [ "$network_context" = "container" ]; then
+        apisix_admin="${APISIX_ADMIN_API_CONTAINER}"
+    else
+        apisix_admin="${APISIX_ADMIN_API}"
+    fi
+
+    log_info "Configuring UX routes"
+    log_info "Using APISIX Admin API ($network_context context): $apisix_admin"
+
+    # Configure root redirect route
+    configure_root_redirect_route "$apisix_admin"
+
+    # Configure portal redirect route
+    configure_portal_redirect_route "$apisix_admin"
+
+    # Configure health route
+    configure_health_route "$apisix_admin"
+
+    # Configure catch-all 404 route (lowest priority)
+    configure_404_route "$apisix_admin"
+}
+
 configure_openai_route() {
     local apisix_admin="$1"
     local template_file="/opt/apisix-gateway/apisix/openai-route.json"
@@ -292,6 +321,102 @@ configure_litellm_route() {
         log_success "LiteLLM provider chat route configured successfully"
     else
         log_error "Failed to configure LiteLLM provider chat route"
+        return 1
+    fi
+}
+
+configure_root_redirect_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/root-redirect-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "Root redirect route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying root redirect route..."
+
+    # Apply the route configuration (no variable substitution needed)
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$(cat "$template_file")" \
+        "$apisix_admin/routes/root-redirect-route" >/dev/null; then
+        log_success "Root redirect route configured successfully"
+    else
+        log_error "Failed to configure root redirect route"
+        return 1
+    fi
+}
+
+configure_portal_redirect_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/portal-redirect-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "Portal redirect route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying portal redirect route..."
+
+    # Apply the route configuration (no variable substitution needed)
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$(cat "$template_file")" \
+        "$apisix_admin/routes/portal-redirect-route" >/dev/null; then
+        log_success "Portal redirect route configured successfully"
+    else
+        log_error "Failed to configure portal redirect route"
+        return 1
+    fi
+}
+
+configure_health_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/health-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "Health route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying health route..."
+
+    # Apply the route configuration (no variable substitution needed)
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$(cat "$template_file")" \
+        "$apisix_admin/routes/health-route" >/dev/null; then
+        log_success "Health route configured successfully"
+    else
+        log_error "Failed to configure health route"
+        return 1
+    fi
+}
+
+configure_404_route() {
+    local apisix_admin="$1"
+    local template_file="/opt/apisix-gateway/apisix/404-route.json"
+
+    if [ ! -f "$template_file" ]; then
+        log_error "404 route template not found: $template_file"
+        return 1
+    fi
+
+    log_info "Applying catch-all 404 route..."
+
+    # Apply the route configuration (no variable substitution needed)
+    if curl -fsS -X PUT \
+        -H "X-API-KEY: $ADMIN_KEY" \
+        -H "Content-Type: application/json" \
+        -d "$(cat "$template_file")" \
+        "$apisix_admin/routes/catch-all-404-route" >/dev/null; then
+        log_success "Catch-all 404 route configured successfully"
+    else
+        log_error "Failed to configure catch-all 404 route"
         return 1
     fi
 }
@@ -428,6 +553,7 @@ main() {
     wait_for_provider
     configure_oidc_routes
     configure_ai_routes
+    configure_ux_routes
     verify_routes
 
     echo ""
@@ -436,8 +562,10 @@ main() {
     echo "Next steps:"
     DATA_PLANE=${DATA_PLANE:-http://localhost:9080}
     echo "  1. Test portal access: $DATA_PLANE/portal"
-    echo "  2. Check route config: curl -H 'X-API-KEY: $ADMIN_KEY' ${APISIX_ADMIN_API}/routes"
-    echo "  3. Review logs: docker logs apisix-dev"
+    echo "  2. Test root redirect: $DATA_PLANE/"
+    echo "  3. Test health check: $DATA_PLANE/health"
+    echo "  4. Check route config: curl -H 'X-API-KEY: $ADMIN_KEY' ${APISIX_ADMIN_API}/routes"
+    echo "  5. Review logs: docker logs apisix-dev"
     echo ""
 }
 

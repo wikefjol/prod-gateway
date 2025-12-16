@@ -1,0 +1,19 @@
+{
+  "test_id": "health_check",
+  "validation_status": "completed",
+  "validation_time": "2025-12-15T12:57:48.060585Z",
+  "passed": false,
+  "passed_validations": [
+    "Status code matches expected 200",
+    "JSON field 'status' matches expected value",
+    "JSON field 'service' matches expected value"
+  ],
+  "failed_validations": [
+    "Content-type '' does not contain 'application/json'"
+  ],
+  "validation_count": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1
+  }
+}

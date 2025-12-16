@@ -7,6 +7,7 @@ set -euo pipefail
 # Configuration defaults
 PROVIDER=${OIDC_PROVIDER_NAME:-"keycloak"}
 ENVIRONMENT=${ENVIRONMENT:-"dev"}
+PROJECT=${COMPOSE_PROJECT_NAME:-"apisix-${ENVIRONMENT}"}
 DEBUG_MODE=${DEBUG_MODE:-false}
 FORCE_RECREATE=${FORCE_RECREATE:-false}
 
@@ -28,6 +29,7 @@ Universal APISIX Gateway startup script with provider switching support.
 OPTIONS:
     -p, --provider PROVIDER     OIDC provider to use (keycloak, entraid)
     -e, --environment ENV       Environment to use (dev, test, prod)
+    --project PROJECT           Docker Compose project name (default: apisix-{environment})
     -d, --debug                 Enable debug mode with diagnostic containers
     -f, --force-recreate        Force recreation of containers
     -h, --help                  Show this help message
@@ -35,6 +37,7 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
     OIDC_PROVIDER_NAME          Override provider (default: keycloak)
     ENVIRONMENT                 Override environment (default: dev)
+    COMPOSE_PROJECT_NAME        Override project name
     DEBUG_MODE                  Enable debug mode (default: false)
     FORCE_RECREATE             Force container recreation (default: false)
 
@@ -64,6 +67,14 @@ parse_args() {
                 ;;
             -e|--environment)
                 ENVIRONMENT="$2"
+                # Update project name if not explicitly set
+                if [[ "$PROJECT" == "apisix-"* ]]; then
+                    PROJECT="apisix-${ENVIRONMENT}"
+                fi
+                shift 2
+                ;;
+            --project)
+                PROJECT="$2"
                 shift 2
                 ;;
             -d|--debug)
@@ -122,23 +133,25 @@ preflight_checks() {
 
 # Stop any existing containers
 stop_existing() {
-    log_info "Stopping any existing containers..."
+    log_info "Stopping any existing containers for project: $PROJECT"
 
-    # Try to stop with current configuration
-    if docker compose -f "$PROJECT_ROOT/infrastructure/docker/base.yml" \
-                      -f "$PROJECT_ROOT/infrastructure/docker/providers.yml" \
-                      -f "$PROJECT_ROOT/infrastructure/docker/debug.yml" \
-                      ps -q >/dev/null 2>&1; then
-        docker compose -f "$PROJECT_ROOT/infrastructure/docker/base.yml" \
-                      -f "$PROJECT_ROOT/infrastructure/docker/providers.yml" \
-                      -f "$PROJECT_ROOT/infrastructure/docker/debug.yml" \
-                      down
+    # Try to stop with current project configuration
+    local compose_cmd=(
+        docker compose
+        -p "$PROJECT"
+        -f "$PROJECT_ROOT/infrastructure/docker/base.yml"
+        -f "$PROJECT_ROOT/infrastructure/docker/providers.yml"
+        -f "$PROJECT_ROOT/infrastructure/docker/debug.yml"
+    )
+
+    if "${compose_cmd[@]}" ps -q >/dev/null 2>&1; then
+        "${compose_cmd[@]}" down
     fi
 
     # Clean up any orphaned containers
     docker container prune -f >/dev/null 2>&1 || true
 
-    log_success "Existing containers stopped"
+    log_success "Existing containers stopped for project: $PROJECT"
 }
 
 # Start services
@@ -146,11 +159,13 @@ start_services() {
     log_info "Starting APISIX Gateway infrastructure..."
 
     # Generate docker-compose command
-    generate_compose_command "$PROVIDER" "$ENVIRONMENT" "$DEBUG_MODE"
+    generate_compose_command "$PROVIDER" "$ENVIRONMENT" "$DEBUG_MODE" "$PROJECT"
 
-    # Build compose command array
+    # Build compose command array with project support
     local compose_cmd=(
         docker compose
+        -p "$PROJECT"
+        --env-file "$COMPOSE_ENV_FILE"
         -f "$PROJECT_ROOT/infrastructure/docker/base.yml"
         -f "$PROJECT_ROOT/infrastructure/docker/providers.yml"
     )
@@ -172,9 +187,9 @@ start_services() {
         up_args+=(--force-recreate)
     fi
 
-    # Execute compose command
-    log_info "Executing: ${compose_cmd[*]} ${up_args[*]} etcd-dev apisix-dev loader-dev portal-backend"
-    "${compose_cmd[@]}" "${up_args[@]}" etcd-dev apisix-dev loader-dev portal-backend
+    # Execute compose command (updated service names without -dev suffix)
+    log_info "Executing: ${compose_cmd[*]} ${up_args[*]} etcd apisix loader portal-backend"
+    "${compose_cmd[@]}" "${up_args[@]}" etcd apisix loader portal-backend
 
     log_success "Services started successfully"
 }
@@ -270,11 +285,12 @@ show_status() {
     echo "Configuration Summary:"
     echo "  Provider: $PROVIDER"
     echo "  Environment: $ENVIRONMENT"
+    echo "  Project: $PROJECT"
     echo "  Debug Mode: $DEBUG_MODE"
     echo ""
     echo "Services:"
-    echo "  🌐 APISIX Gateway:    http://localhost:${APISIX_NODE_LISTEN:-9080}"
-    echo "  🔧 APISIX Admin:      http://localhost:${APISIX_ADMIN_PORT:-9180}"
+    echo "  🌐 APISIX Gateway:    http://localhost:${APISIX_HOST_GATEWAY_PORT:-9080}"
+    echo "  🔧 APISIX Admin:      http://localhost:${APISIX_HOST_ADMIN_PORT:-9180}"
     echo "  📊 APISIX Dashboard:  Built-in at Admin API"
 
     if [[ "$PROVIDER" == "keycloak" ]]; then
@@ -292,8 +308,8 @@ show_status() {
 
     echo ""
     echo "Next Steps:"
-    echo "  1. Test OIDC flow:      http://localhost:${APISIX_NODE_LISTEN:-9080}/portal"
-    echo '  2. View routes:         curl -H "X-API-KEY: $ADMIN_KEY"' "http://localhost:${APISIX_ADMIN_PORT:-9180}/apisix/admin/routes"
+    echo "  1. Test OIDC flow:      http://localhost:${APISIX_HOST_GATEWAY_PORT:-9080}/portal"
+    echo '  2. View routes:         curl -H "X-API-KEY: $ADMIN_KEY"' "http://localhost:${APISIX_HOST_ADMIN_PORT:-9180}/apisix/admin/routes"
     echo "  3. Check logs:          docker compose -f infrastructure/docker/base.yml logs -f"
     echo "  4. Stop environment:    ./scripts/lifecycle/stop.sh"
 

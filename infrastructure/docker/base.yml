@@ -1,5 +1,6 @@
 # Base Infrastructure Services
 # Core services required by all environments
+# Supports Docker Compose Projects for environment separation
 
 networks:
   apisix:
@@ -13,13 +14,12 @@ volumes:
 
 services:
   # etcd - Configuration store for APISIX
-  etcd-dev:
+  etcd:
     image: bitnamilegacy/etcd:3.5.11
-    container_name: etcd-${ENVIRONMENT:-dev}
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
       - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-${ENVIRONMENT:-dev}:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
     volumes:
       - etcd_data:/bitnami/etcd
     networks:
@@ -33,13 +33,12 @@ services:
       start_period: 30s
 
   # APISIX Gateway - API Gateway with OIDC support
-  apisix-dev:
+  apisix:
     build:
       context: ../../apisix
       dockerfile: Dockerfile
-    container_name: apisix-${ENVIRONMENT:-dev}
     depends_on:
-      etcd-dev:
+      etcd:
         condition: service_healthy
     networks:
       - apisix
@@ -47,8 +46,11 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     ports:
-      - "127.0.0.1:${APISIX_NODE_LISTEN:-9080}:9080"
-      - "127.0.0.1:${APISIX_ADMIN_PORT:-9180}:9180"
+      # Dev Environment: Host ports 9080/9180 → Container ports 9080/9180
+      # Test Environment: Host ports 9081/9181 → Container ports 9080/9180
+      # Port mapping controlled by environment variables
+      - "127.0.0.1:${APISIX_HOST_GATEWAY_PORT:-9080}:9080"
+      - "127.0.0.1:${APISIX_HOST_ADMIN_PORT:-9180}:9180"
     environment:
       - CUSTOM_PROFILE=${ENVIRONMENT:-dev}
       - ADMIN_KEY=${ADMIN_KEY}
@@ -66,11 +68,10 @@ services:
       start_period: 45s
 
   # Configuration Loader - Applies OIDC routes and configurations
-  loader-dev:
+  loader:
     image: curlimages/curl:latest
-    container_name: apisix-loader-${ENVIRONMENT:-dev}
     depends_on:
-      apisix-dev:
+      apisix:
         condition: service_healthy
     networks:
       - apisix
@@ -93,7 +94,7 @@ services:
 
       # Backend configuration
       - PORTAL_BACKEND_HOST=${PORTAL_BACKEND_HOST:-portal-backend:3000}
-      - BACKEND_HOST=${BACKEND_HOST:-app-backend-dev:3000}
+      - BACKEND_HOST=${BACKEND_HOST:-portal-backend:3000}
 
       # Legacy variables for backward compatibility
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-${OIDC_CLIENT_ID}}
@@ -108,9 +109,8 @@ services:
     build:
       context: ../../portal-backend
       dockerfile: Dockerfile
-    container_name: portal-backend-${ENVIRONMENT:-dev}
     depends_on:
-      apisix-dev:
+      apisix:
         condition: service_healthy
     networks:
       - apisix

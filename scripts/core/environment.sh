@@ -255,11 +255,12 @@ setup_environment() {
     return 0
 }
 
-# Docker Compose command generation
+# Docker Compose command generation with project support
 generate_compose_command() {
     local provider="${1:-}"
     local environment="${2:-dev}"
     local debug_mode="${3:-false}"
+    local project="${4:-apisix-${environment}}"
 
     local compose_files=()
 
@@ -277,13 +278,19 @@ generate_compose_command() {
     # Export for use by calling scripts
     export COMPOSE_FILES="${compose_files[*]}"
     export COMPOSE_PROFILES="$provider"
+    export COMPOSE_PROJECT="$project"
 
     if [[ "$debug_mode" == "true" ]]; then
         export COMPOSE_PROFILES="$provider,debug"
     fi
 
+    # Set environment file path
+    export COMPOSE_ENV_FILE="$PROJECT_ROOT/config/env/${environment}.env"
+
     log_debug "Generated compose command with files: ${COMPOSE_FILES}"
     log_debug "Using profiles: ${COMPOSE_PROFILES}"
+    log_debug "Using project: ${COMPOSE_PROJECT}"
+    log_debug "Using env file: ${COMPOSE_ENV_FILE}"
 }
 
 # Utility functions

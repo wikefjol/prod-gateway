@@ -24,8 +24,8 @@ apisix:
 
 etcd:
   host:
-    - "http://etcd-dev:2379"
-  prefix: "/apisix-dev"
+    - "http://etcd:2379"
+  prefix: "/apisix"
   timeout: 30
 
 plugins:
