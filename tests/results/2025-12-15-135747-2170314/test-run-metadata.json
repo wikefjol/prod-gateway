@@ -1,0 +1,17 @@
+{
+    "test_run_id": "2025-12-15-135747-2170314",
+    "test_suite": "all",
+    "start_time": "2025-12-15T12:57:47.750Z",
+    "environment": {
+        "admin_key_set": true,
+        "dev_mode": "false",
+        "oidc_provider": "keycloak"
+    },
+    "options": {
+        "verbose": false,
+        "continue_on_failure": false,
+        "generate_report": true,
+        "cleanup_on_exit": true
+    },
+    "services": {}
+}

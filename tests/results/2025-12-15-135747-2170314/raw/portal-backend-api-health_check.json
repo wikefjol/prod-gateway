@@ -1,0 +1,45 @@
+{
+  "test_id": "health_check",
+  "name": "Portal Backend Health Check",
+  "description": "Verify portal backend health endpoint responds correctly",
+  "timestamp": "2025-12-15T12:57:48.017758Z",
+  "request": {
+    "method": "GET",
+    "url": "http://localhost:3001/health",
+    "headers": {},
+    "body": null,
+    "timeout": 5
+  },
+  "response": {
+    "status_code": 200,
+    "headers": {
+      "Server": "gunicorn",
+      "Date": "Mon, 15 Dec 2025 12:57:48 GMT",
+      "Connection": "close",
+      "Content-Type": "application/json",
+      "Content-Length": "48"
+    },
+    "json": {
+      "service": "portal-backend",
+      "status": "healthy"
+    },
+    "text": "{\"service\":\"portal-backend\",\"status\":\"healthy\"}\n",
+    "response_time_ms": 3
+  },
+  "expected": {
+    "status_code": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "status": "healthy",
+      "service": "portal-backend"
+    }
+  },
+  "validation_rules": [
+    "response.status_code == 200",
+    "response.json.status == 'healthy'",
+    "response.json.service == 'portal-backend'"
+  ],
+  "status": "unknown"
+}

@@ -15,18 +15,18 @@ deployment:
       - 129.16.0.0/16
       - 172.16.0.0/12
     admin_listen:
-      port: 9181
+      port: 9180
 
   enable_admin_ui: true
 
 apisix:
   node_listen:
-    - 9081
+    - 9080
 
 etcd:
   host:
-    - "http://etcd-test:2379"
-  prefix: "/apisix-test"
+    - "http://etcd:2379"
+  prefix: "/apisix"
   timeout: 30
 
 plugins:

@@ -73,6 +73,34 @@ ssh -f -N \
 └── old/                            # Legacy implementation (archived)
 ```
 
+## APISIX Plugin Configuration
+
+### Enabled Plugins
+The system includes the following APISIX plugins configured in `apisix/config-dev-template.yaml`:
+
+**Core Plugins:**
+- `proxy-rewrite` - URL and header rewriting for upstream services
+- `key-auth` - API key authentication for AI provider endpoints
+- `openid-connect` - OIDC authentication for portal access
+
+**Security & Rate Limiting:**
+- `limit-count` - Request rate limiting
+- `cors` - Cross-Origin Resource Sharing
+- `hmac-auth` - HMAC authentication support
+- `consumer-restriction` - Consumer access control
+
+**User Experience Plugins:**
+- `redirect` - HTTP redirects (root path and portal trailing slash)
+- `serverless-pre-function` - Custom Lua functions for 404 responses
+
+### UX Route Implementation
+The system provides seamless user experience through configured routes:
+
+1. **Smart Redirects**: Root path (`/`) automatically redirects users to the portal
+2. **Consistent URLs**: Portal access (`/portal`) redirects to trailing slash version (`/portal/`)
+3. **Health Monitoring**: Dedicated health endpoint for system monitoring
+4. **Custom 404 Handling**: Graceful handling of undefined routes
+
 ## Configuration Management
 
 ### Configuration Loading Hierarchy
@@ -144,8 +172,15 @@ OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh validate
 | APISIX Admin | 9180 | Admin API & dashboard | `http://localhost:9180` |
 | Keycloak | 8080 | Keycloak (when using keycloak profile) | `http://localhost:8080` |
 
+### User Experience Routes
+- **Root Path**: `http://localhost:9080/` - Automatically redirects to `/portal/`
+- **Portal Access**: `http://localhost:9080/portal` - Redirects to `/portal/` (trailing slash)
+- **Portal Dashboard**: `http://localhost:9080/portal/` - Protected by OIDC authentication
+- **Health Check**: `http://localhost:9080/health` - System health endpoint
+- **Custom 404**: Any undefined route returns appropriate 404 response
+
 ### OIDC Protected Endpoints
-- **Portal**: `http://localhost:9080/portal` - Protected by OIDC
+- **Portal**: `http://localhost:9080/portal/` - Protected by OIDC
 - **Legacy Callback**: `http://localhost:9080/v1/auth/oidc/callback` - OIDC callback endpoint
 
 ## Portal Backend Service
@@ -425,6 +460,31 @@ OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
 
 ## Recent Fixes and Improvements (2024-12)
 
+### UX Route Implementation (December 2024)
+**Enhancement**: Complete user experience route functionality implemented
+**Features Added**:
+- **Smart Root Redirect**: Visiting `/` automatically redirects to `/portal/`
+- **Portal URL Normalization**: `/portal` redirects to `/portal/` for consistency
+- **Health Monitoring**: Dedicated `/health` endpoint for system health checks
+- **Plugin Enablement**: Added `redirect` and `serverless-pre-function` plugins to APISIX
+- **IAC Compliance**: All changes implemented through lifecycle scripts and single source of truth
+
+**Technical Implementation**:
+```yaml
+# Added to apisix/config-dev-template.yaml
+plugins:
+  - redirect                    # For URL redirects
+  - serverless-pre-function     # For custom responses
+```
+
+**Verification Results**:
+- ✅ Root redirect (`/` → `/portal/`) - HTTP 302
+- ✅ Portal redirect (`/portal` → `/portal/`) - HTTP 302
+- ✅ Health endpoint (`/health`) - HTTP 200 with JSON status
+- ✅ Existing OIDC and API functionality preserved
+
+**Status**: ✅ **COMPLETED** - Full UX route functionality active
+
 ### Critical OIDC Connectivity Fix
 **Issue**: OIDC flow failing with "network is unreachable" when accessing Microsoft EntraID
 **Root Cause**: APISIX container unable to resolve external DNS for EntraID discovery endpoint
@@ -475,6 +535,12 @@ After these fixes, the system should work end-to-end:
 # Test full OIDC flow (should show all tests passing)
 OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
 
+# Test UX route functionality
+curl -I http://localhost:9080/                    # Should redirect to /portal/
+curl -I http://localhost:9080/portal             # Should redirect to /portal/
+curl http://localhost:9080/health                # Should return health JSON
+curl http://localhost:9080/nonexistent           # Should return 404
+
 # Test health endpoint (should return APISIX routes JSON)
 curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
 
@@ -493,6 +559,8 @@ curl http://localhost:3001/health
 - Health checks use reliable built-in endpoints
 - All test scripts pass successfully
 - Environment switching works cleanly
+- **NEW**: Complete UX route functionality active (redirects, health, 404 handling)
+- **NEW**: Additional APISIX plugins enabled (redirect, serverless-pre-function)
 
 ## Legacy Files (Archived)
 
