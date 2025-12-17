@@ -4,6 +4,9 @@ bin/
 
 # Secrets directory (contains sensitive credentials)
 secrets/
+
+# Generated complete environment files (contain resolved secrets)
+config/env/*.complete.env
 # APISIX source repository (external dependency)
 apisix-source-repo/
 

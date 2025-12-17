@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gettext-base \
 # config templates + entrypoint
 COPY config-template.yaml /usr/local/apisix/conf/config-template.yaml
 COPY config-dev-template.yaml /usr/local/apisix/conf/config-dev-template.yaml
+COPY config-test-template.yaml /usr/local/apisix/conf/config-test-template.yaml
 COPY config-dev-static.yaml /usr/local/apisix/conf/config-dev-static.yaml
 COPY config-test-static.yaml /usr/local/apisix/conf/config-test-static.yaml
 COPY entrypoint-simple.sh /docker-entrypoint-custom.sh
