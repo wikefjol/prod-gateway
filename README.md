@@ -1,596 +1,495 @@
-# APISIX Gateway with Multi-Provider OIDC
+# APISIX Gateway with Multi-Provider OIDC Authentication
 
-A clean, modular Infrastructure-as-Code (IAC) implementation of APISIX Gateway with support for multiple OIDC providers including Keycloak and Microsoft EntraID (Azure AD).
+A production-ready, modular Infrastructure-as-Code (IaC) implementation of Apache APISIX Gateway with comprehensive multi-provider OIDC authentication support and AI provider proxying capabilities.
 
-## Quick Start
+## 🚀 Features
 
-### If you are working on remote: 
+- **Multi-Provider OIDC**: Support for Microsoft EntraID (Azure AD) and Keycloak
+- **Self-Service Portal**: Python Flask backend for API key management
+- **AI Provider Gateway**: Secure proxying to OpenAI, Anthropic, and LiteLLM endpoints
+- **Multi-Environment Support**: Clean separation between dev, test, and production environments
+- **Security Hardening**: Admin API localhost-only binding, TLS termination, and proper authentication flows
+- **Clean Architecture**: Modular configuration with provider-specific separation of concerns
+- **Infrastructure as Code**: Fully automated deployment with Docker Compose
+
+## 📋 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [System Requirements](#-system-requirements)
+- [CLI Usage](#-cli-usage)
+- [Architecture Overview](#-architecture-overview)
+- [Configuration](#-configuration)
+- [Usage Examples](#-usage-examples)
+- [Security Features](#-security-features)
+- [Troubleshooting](#-troubleshooting)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+
+## ⚡ Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Python 3.8+ (for CLI)
+- curl (for testing)
+- bash (scripts are bash-based)
+
+### Using the CLI (Recommended)
+
+The gateway includes a powerful CLI for easy management:
+
 ```bash
-ssh -f -N \
-  -L 8080:localhost:8080 \
-  -L 9080:localhost:9080 \
-  -L 9180:localhost:9180 \
-  -L 3000:localhost:3000 \
-  -o ServerAliveInterval=30 \
-  <cid>@lamassu.ita.chalmers.se
+# Complete setup (one command - the "gold standard")
+./gw reset dev
+
+# Check system status
+./gw status dev
+
+# Run comprehensive health checks
+./gw doctor dev
+
+# View configured routes
+./gw routes dev
+
+# View all CLI commands
+./gw --help
 ```
 
-### Start with Default Provider (Keycloak)
+### Manual Setup (Advanced Users)
+
+For manual control or troubleshooting:
+
 ```bash
-./scripts/lifecycle/start.sh
-```
-
-### Start with EntraID
-```bash
-./scripts/lifecycle/start.sh --provider entraid
-```
-
-### Start with Debug Mode
-```bash
-./scripts/lifecycle/start.sh --provider entraid --debug
-```
-
-### Stop Environment
-```bash
-./scripts/lifecycle/stop.sh
-```
-
-## Architecture & Design Principles
-
-### Clean IAC Implementation
-- **Separation of Concerns**: Provider configs separate from core infrastructure
-- **Single Source of Truth**: Hierarchical configuration management
-- **Provider Abstraction**: Clean interfaces for switching between OIDC providers
-- **Debug-First**: Enhanced containers with curl and diagnostic tools
-- **Security**: Sensitive data in separate gitignored files
-- **No Coupling**: Avoid hardcoding and tight coupling between components
-
-### Directory Structure
-```
-├── config/                          # Modular configuration
-│   ├── providers/
-│   │   ├── entraid/dev.env         # EntraID-specific settings
-│   │   ├── keycloak/dev.env        # Keycloak-specific settings
-│   │   └── shared/
-│   │       ├── base.env            # Common APISIX settings
-│   │       └── apisix.env          # APISIX admin keys
-├── infrastructure/docker/           # Modular Docker Compose
-│   ├── base.yml                    # Core services (etcd, apisix)
-│   ├── providers.yml               # Provider services with profiles
-│   └── debug.yml                   # Debug toolkit with curl
-├── scripts/
-│   ├── core/environment.sh         # Configuration management
-│   ├── lifecycle/
-│   │   ├── start.sh                # Universal startup script
-│   │   └── stop.sh                 # Universal stop script
-│   ├── bootstrap/bootstrap.sh      # OIDC route configuration
-│   └── debug/
-│       ├── curl-test.sh            # OIDC flow testing
-│       └── inspect-config.sh       # Configuration inspector
-├── secrets/                        # Sensitive credentials (gitignored)
-│   ├── entraid-dev.env             # EntraID credentials
-│   └── keycloak-dev.env            # Keycloak credentials (optional)
-└── old/                            # Legacy implementation (archived)
-```
-
-## APISIX Plugin Configuration
-
-### Enabled Plugins
-The system includes the following APISIX plugins configured in `apisix/config-dev-template.yaml`:
-
-**Core Plugins:**
-- `proxy-rewrite` - URL and header rewriting for upstream services
-- `key-auth` - API key authentication for AI provider endpoints
-- `openid-connect` - OIDC authentication for portal access
-
-**Security & Rate Limiting:**
-- `limit-count` - Request rate limiting
-- `cors` - Cross-Origin Resource Sharing
-- `hmac-auth` - HMAC authentication support
-- `consumer-restriction` - Consumer access control
-
-**User Experience Plugins:**
-- `redirect` - HTTP redirects (root path and portal trailing slash)
-- `serverless-pre-function` - Custom Lua functions for 404 responses
-
-### UX Route Implementation
-The system provides seamless user experience through configured routes:
-
-1. **Smart Redirects**: Root path (`/`) automatically redirects users to the portal
-2. **Consistent URLs**: Portal access (`/portal`) redirects to trailing slash version (`/portal/`)
-3. **Health Monitoring**: Dedicated health endpoint for system monitoring
-4. **Custom 404 Handling**: Graceful handling of undefined routes
-
-## Configuration Management
-
-### Configuration Loading Hierarchy
-1. **Shared Config**: Common APISIX settings (`config/shared/`)
-2. **Secrets**: Provider credentials (`secrets/{provider}-{environment}.env`)
-3. **Provider Config**: Provider-specific settings (`config/providers/{provider}/`)
-
-### Provider Switching
-```bash
-# Environment variable approach
-export OIDC_PROVIDER_NAME=entraid
-./scripts/lifecycle/start.sh
-
-# Command line approach (recommended)
+# Start with Microsoft EntraID (recommended for production)
 ./scripts/lifecycle/start.sh --provider entraid
 
-# With additional options
-./scripts/lifecycle/start.sh --provider keycloak --debug --force-recreate
-```
-
-## Supported OIDC Providers
-
-### Keycloak (Local Development)
-- **Setup**: Automatic via Docker Compose
-- **Admin**: `http://localhost:8080` (admin/admin)
-- **Discovery**: `http://keycloak-dev:8080/realms/quickstart/.well-known/openid-connect/configuration`
-- **Configuration**: Ready out-of-the-box
-
-### Microsoft EntraID (Azure AD)
-- **Setup**: Requires admin configuration
-- **Discovery**: `https://login.microsoftonline.com/{tenant}/v2.0/.well-known/openid-connect/configuration`
-- **Configuration**: Update `secrets/entraid-dev.env` with actual credentials
-
-## Provider Setup
-
-### Keycloak Setup
-Keycloak works out-of-the-box:
-```bash
-./scripts/lifecycle/start.sh --provider keycloak
-```
-
-### EntraID Setup
-
-#### 1. Configure Credentials
-Your admin should update `secrets/entraid-dev.env`:
-```bash
-# Replace with actual EntraID values
-ENTRAID_CLIENT_ID=your-application-client-id
-ENTRAID_CLIENT_SECRET=your-client-secret-value
-ENTRAID_TENANT_ID=your-azure-tenant-id
-ENTRAID_SESSION_SECRET=$(openssl rand -hex 16)
-```
-
-#### 2. Start EntraID Environment
-```bash
-./scripts/lifecycle/start.sh --provider entraid
-```
-
-#### 3. Validate Configuration
-```bash
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh validate
-```
-
-## Services & Endpoints
-
-| Service | Port | Description | Access |
-|---------|------|-------------|--------|
-| APISIX Gateway | 9080 | Main API gateway | `http://localhost:9080` |
-| APISIX Admin | 9180 | Admin API & dashboard | `http://localhost:9180` |
-| Keycloak | 8080 | Keycloak (when using keycloak profile) | `http://localhost:8080` |
-
-### User Experience Routes
-- **Root Path**: `http://localhost:9080/` - Automatically redirects to `/portal/`
-- **Portal Access**: `http://localhost:9080/portal` - Redirects to `/portal/` (trailing slash)
-- **Portal Dashboard**: `http://localhost:9080/portal/` - Protected by OIDC authentication
-- **Health Check**: `http://localhost:9080/health` - System health endpoint
-- **Custom 404**: Any undefined route returns appropriate 404 response
-
-### OIDC Protected Endpoints
-- **Portal**: `http://localhost:9080/portal/` - Protected by OIDC
-- **Legacy Callback**: `http://localhost:9080/v1/auth/oidc/callback` - OIDC callback endpoint
-
-## Portal Backend Service
-
-The Self-Service API Key Portal Backend is a Python Flask application that enables authenticated users to manage their APISIX API keys through a simple web interface.
-
-### Architecture
-
-- **Technology**: Python Flask with Gunicorn production server
-- **Container**: `portal-backend-dev` running on port 3001 (external), 3000 (internal)
-- **Authentication**: APISIX header injection (`X-User-Oid`, `X-User-Name`, `X-User-Email`)
-- **Integration**: APISIX Admin API for Consumer/Credential management
-- **Security**: CSPRNG-based key generation using `secrets.token_urlsafe(32)`
-
-### Self-Service API Key Management
-
-The portal implements a complete self-service workflow following the v0 specification:
-
-#### User Workflow
-1. **Navigate**: User visits `http://localhost:9080/portal/`
-2. **Authentication**: APISIX redirects to EntraID/Keycloak for OIDC authentication
-3. **Header Injection**: APISIX injects user identity headers after successful authentication
-4. **Portal Access**: User sees dashboard with current API key status
-5. **Key Management**: User can generate new keys or recycle existing keys
-
-#### Key Management Operations
-
-**Get Key Operation (`/portal/get-key`):**
-- If exactly one credential exists: return existing key
-- If none exist: generate new key and create credential
-- Enforces exactly 0 or 1 key-auth credential per user (1:1 mapping)
-
-**Recycle Key Operation (`/portal/recycle-key`):**
-- If none exist: treat as "Get key" operation
-- If one exists: generate new key and update credential
-- Previous key becomes immediately invalid
-
-#### Consumer Management
-- **1:1 Mapping**: One OIDC user = one APISIX Consumer
-- **Automatic Creation**: Consumers created automatically on first portal access
-- **Consumer Username**: Uses OIDC user OID as Consumer username
-- **Metadata**: Consumers tagged with creation timestamp and source information
-
-### API Endpoints
-
-| Endpoint | Method | Description | Headers Required |
-|----------|--------|-------------|------------------|
-| `/portal/` | GET | Dashboard interface showing key status | `X-User-Oid` |
-| `/portal/get-key` | POST | Generate or retrieve API key | `X-User-Oid` |
-| `/portal/recycle-key` | POST | Rotate/recycle API key | `X-User-Oid` |
-| `/health` | GET | Health check endpoint | None |
-
-### Development Setup
-
-#### Full Stack Development
-```bash
-# Start complete stack with portal backend
-./scripts/lifecycle/start.sh --provider entraid
-
-# Access portal through APISIX (OIDC protected)
-open http://localhost:9080/portal/
-
-# Check portal backend health
-curl http://localhost:3001/health
-```
-
-#### Direct Backend Development
-For development without OIDC (requires user identity headers):
-```bash
-# Direct backend access with simulated user
-curl -H "X-User-Oid: test-user-123" \
-     -H "X-User-Name: Test User" \
-     -H "X-User-Email: test@example.com" \
-     http://localhost:3001/portal/
-
-# Generate API key
-curl -X POST \
-     -H "X-User-Oid: test-user-123" \
-     -H "X-User-Name: Test User" \
-     -H "X-User-Email: test@example.com" \
-     http://localhost:3001/portal/get-key
-
-# Recycle API key
-curl -X POST \
-     -H "X-User-Oid: test-user-123" \
-     http://localhost:3001/portal/recycle-key
-```
-
-### Portal Backend Configuration
-
-The portal backend uses environment variables for APISIX integration:
-
-```bash
-# Core APISIX integration
-ADMIN_KEY=your-admin-key
-APISIX_ADMIN_API_CONTAINER=http://apisix-dev:9180/apisix/admin
-APISIX_ADMIN_API=http://localhost:9180/apisix/admin
-
-# Environment context
-ENVIRONMENT=dev
-PORTAL_BACKEND_HOST=portal-backend:3000
-```
-
-### Security Features
-
-1. **Secure Key Generation**: Uses Python `secrets` module with CSPRNG
-2. **Key Fingerprinting**: Only logs partial key fingerprints (`key[:8]...key[-4:]`)
-3. **No Key Logging**: Full API keys never appear in logs
-4. **Header Validation**: Validates required user identity headers
-5. **APISIX Integration**: All key operations go through APISIX Admin API
-6. **Non-root Container**: Runs as `portal` user (UID:GID managed)
-
-### Portal Backend Troubleshooting
-
-#### Issue: Portal Backend Not Starting
-**Symptoms**: Container fails to start or health check fails
-**Solution**:
-```bash
-# Check container logs
-docker logs portal-backend-dev
-
-# Verify environment variables
-docker exec portal-backend-dev env | grep -E "(ADMIN_KEY|APISIX)"
-
-# Check health endpoint directly
-curl http://localhost:3001/health
-```
-
-#### Issue: User Identity Headers Missing
-**Symptoms**: "Authentication required" error in portal
-**Solution**:
-1. Verify OIDC authentication is working: `curl -v http://localhost:9080/portal/`
-2. Check APISIX route configuration includes header injection
-3. Review bootstrap logs: `docker logs apisix-loader-dev`
-
-#### Issue: APISIX Admin API Connection Failed
-**Symptoms**: Portal shows "Internal server error" or credential operations fail
-**Solution**:
-```bash
-# Test APISIX Admin API connectivity from portal backend
-docker exec portal-backend-dev curl -H "X-API-KEY: $ADMIN_KEY" \
-  http://apisix-dev:9180/apisix/admin/consumers
-
-# Verify ADMIN_KEY is correctly set
-docker exec portal-backend-dev printenv ADMIN_KEY
-
-# Check network connectivity to APISIX admin API
-# Note: Using curl instead of ping because portal backend container doesn't include ping
-# and HTTP connectivity is what matters for API operations
-docker exec portal-backend-dev curl -f -s http://apisix-dev:9180/apisix/admin/routes -H "X-API-KEY: $ADMIN_KEY" >/dev/null && echo "APISIX connectivity: OK" || echo "APISIX connectivity: FAILED"
-```
-
-#### Issue: Consumer Creation Fails
-**Symptoms**: Logs show "Consumer creation failed" or ETCD errors
-**Solution**:
-1. Verify ADMIN_KEY has sufficient privileges
-2. Check ETCD health: `docker exec etcd-dev etcdctl endpoint health`
-3. Review Consumer data format in logs for forbidden fields
-4. Test Consumer API manually:
-```bash
-curl -X PUT -H "X-API-KEY: $ADMIN_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{"username":"test","desc":"test consumer"}' \
-     http://localhost:9180/apisix/admin/consumers/test
-```
-
-## Debug & Troubleshooting
-
-### Debug Mode
-Start with enhanced debugging capabilities:
-```bash
-./scripts/lifecycle/start.sh --provider entraid --debug
-```
-
-This provides additional containers:
-- **Debug Toolkit**: `docker exec -it apisix-debug-toolkit bash`
-- **HTTP Client**: `docker exec -it apisix-http-client sh`
-- **Config Inspector**: Available via debug scripts
-
-### Configuration Inspection
-```bash
-# Full configuration inspection
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh
-
-# Specific sections
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh oidc
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh validate
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh network
-```
-
-### OIDC Flow Testing
-```bash
-# Test all endpoints
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
-
-# Test specific components
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh discovery
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh portal
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh admin
-```
-
-### Common Debug Scenarios
-
-#### Test OIDC Discovery
-```bash
-# Inside debug container
-docker exec -it apisix-debug-toolkit bash
-curl -s $OIDC_DISCOVERY_ENDPOINT | jq .
-```
-
-#### Test Portal Access
-```bash
-# Should redirect to OIDC provider
-curl -v http://localhost:9080/portal/
-```
-
-#### Check APISIX Routes
-```bash
-curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
-```
-
-## Common Usage Patterns
-
-### Development Workflow
-```bash
-# 1. Start Keycloak environment for initial development
+# Start with Keycloak (local development)
 ./scripts/lifecycle/start.sh --provider keycloak
 
-# 2. Test OIDC flows
-OIDC_PROVIDER_NAME=keycloak scripts/debug/curl-test.sh
-
-# 3. Switch to EntraID for integration testing
-./scripts/lifecycle/stop.sh
+# Start with debug tools
 ./scripts/lifecycle/start.sh --provider entraid --debug
-
-# 4. Validate EntraID setup
-OIDC_PROVIDER_NAME=entraid scripts/debug/inspect-config.sh validate
-
-# 5. Test EntraID flows
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
 ```
 
-### Production Checklist
-- [ ] Update `secrets/entraid-dev.env` with production credentials
-- [ ] Verify OIDC discovery endpoint accessibility
-- [ ] Test complete OIDC flow end-to-end
-- [ ] Configure proper redirect URIs in EntraID application
-- [ ] Set up monitoring and logging
-- [ ] Review security settings and session configuration
-
-## Troubleshooting Guide
-
-### Issue: EntraID Placeholder Values
-**Symptoms**: Configuration validation shows placeholder warnings
-**Solution**: Update `secrets/entraid-dev.env` with actual credentials from your admin
-
-### Issue: OIDC Discovery Endpoint Not Accessible
-**Symptoms**: Discovery endpoint tests fail
-**Solution**:
-1. Verify tenant ID in discovery URL
-2. Check network connectivity from container
-3. Ensure EntraID application is properly configured
-
-### Issue: Portal Route Returns 404
-**Symptoms**: Portal endpoint not found
-**Solution**:
-1. Check if routes were configured: `curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes`
-2. Review bootstrap logs: `docker logs apisix-loader-dev`
-3. Restart with force recreate: `./scripts/lifecycle/start.sh --provider entraid --force-recreate`
-
-### Issue: Provider Switching Not Working
-**Symptoms**: Wrong provider configuration loaded
-**Solution**:
-1. Stop current environment: `./scripts/lifecycle/stop.sh`
-2. Start with explicit provider: `./scripts/lifecycle/start.sh --provider {provider}`
-3. Validate configuration: `OIDC_PROVIDER_NAME={provider} scripts/debug/inspect-config.sh validate`
-
-## Recent Fixes and Improvements (2024-12)
-
-### UX Route Implementation (December 2024)
-**Enhancement**: Complete user experience route functionality implemented
-**Features Added**:
-- **Smart Root Redirect**: Visiting `/` automatically redirects to `/portal/`
-- **Portal URL Normalization**: `/portal` redirects to `/portal/` for consistency
-- **Health Monitoring**: Dedicated `/health` endpoint for system health checks
-- **Plugin Enablement**: Added `redirect` and `serverless-pre-function` plugins to APISIX
-- **IAC Compliance**: All changes implemented through lifecycle scripts and single source of truth
-
-**Technical Implementation**:
-```yaml
-# Added to apisix/config-dev-template.yaml
-plugins:
-  - redirect                    # For URL redirects
-  - serverless-pre-function     # For custom responses
-```
-
-**Verification Results**:
-- ✅ Root redirect (`/` → `/portal/`) - HTTP 302
-- ✅ Portal redirect (`/portal` → `/portal/`) - HTTP 302
-- ✅ Health endpoint (`/health`) - HTTP 200 with JSON status
-- ✅ Existing OIDC and API functionality preserved
-
-**Status**: ✅ **COMPLETED** - Full UX route functionality active
-
-### Critical OIDC Connectivity Fix
-**Issue**: OIDC flow failing with "network is unreachable" when accessing Microsoft EntraID
-**Root Cause**: APISIX container unable to resolve external DNS for EntraID discovery endpoint
-**Solution Applied**:
-- Added DNS configuration to APISIX container in `infrastructure/docker/base.yml`
-- Added network diagnostic tools to APISIX Dockerfile
-- **Status**: ✅ **RESOLVED** - OIDC authentication now works with Microsoft EntraID
-
-```yaml
-# Fix applied to infrastructure/docker/base.yml
-apisix-dev:
-  # ... existing config
-  dns:
-    - 8.8.8.8
-    - 1.1.1.1
-```
-
-### Portal Backend Auto-Start Fix
-**Issue**: Portal backend service not starting automatically with main services
-**Solution Applied**:
-- Updated startup script to explicitly include portal-backend service
-- **Status**: ✅ **RESOLVED** - Portal backend starts automatically
-
-### Docker Volume Conflict Resolution
-**Issue**: Volume conflict errors: "conflicting parameters 'external' and 'driver' specified"
-**Solution Applied**:
-- Made volume definitions consistent across all Docker Compose files
-- Removed obsolete version declarations
-- **Status**: ✅ **RESOLVED** - Clean startup/shutdown with no volume errors
-
-### Health Endpoint Optimization
-**Issue**: Custom health endpoint `/apisix/status` returning 404
-**Solution Applied**:
-- Replaced custom health route with APISIX built-in admin API endpoints
-- Updated test scripts to use reliable built-in endpoints
-- **Status**: ✅ **RESOLVED** - Health checks now use `curl -H "X-API-KEY: $ADMIN_KEY" $APISIX_ADMIN_API/routes`
-
-### Environment Variable Loading Fix
-**Issue**: Stop script failing due to missing environment variables
-**Solution Applied**:
-- Added environment loading to stop script with error handling
-- **Status**: ✅ **RESOLVED** - Stop script works reliably
-
-### Verification Commands
-After these fixes, the system should work end-to-end:
+### Test the Setup
 
 ```bash
-# Test full OIDC flow (should show all tests passing)
-OIDC_PROVIDER_NAME=entraid scripts/debug/curl-test.sh
+# Check system health
+curl http://localhost:9080/health
 
-# Test UX route functionality
-curl -I http://localhost:9080/                    # Should redirect to /portal/
-curl -I http://localhost:9080/portal             # Should redirect to /portal/
-curl http://localhost:9080/health                # Should return health JSON
-curl http://localhost:9080/nonexistent           # Should return 404
-
-# Test health endpoint (should return APISIX routes JSON)
-curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
-
-# Test portal access (should redirect to Microsoft login page)
+# Test the portal (triggers OIDC flow)
 curl -I http://localhost:9080/portal/
 
-# Test portal backend health
-curl http://localhost:3001/health
+# View available routes (manual method)
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes
 ```
 
-### System Status
-**✅ All Critical Issues Resolved**:
-- OIDC authentication flow works with Microsoft EntraID
-- Portal backend starts automatically
-- No Docker volume conflicts
-- Health checks use reliable built-in endpoints
-- All test scripts pass successfully
-- Environment switching works cleanly
-- **NEW**: Complete UX route functionality active (redirects, health, 404 handling)
-- **NEW**: Additional APISIX plugins enabled (redirect, serverless-pre-function)
+### Stop the Environment
 
-## Legacy Files (Archived)
+```bash
+# Using CLI
+./gw down dev
 
-The following files have been moved to `old/` directory:
-- Legacy startup scripts (`start-dev.sh`, `start-test.sh`, etc.)
-- Legacy environment files (`.dev.env`, `.test.env`, `admin.env`)
-- Legacy Docker Compose files (`docker-compose.dev.yml`, `docker-compose.test.yml`)
-- Legacy bootstrap scripts and inspection tools
+# Manual method
+./scripts/lifecycle/stop.sh
+```
 
-These files are preserved for reference but the new IAC implementation should be used going forward.
+## 🔧 System Requirements
 
-## Key Improvements Over Legacy Implementation
+### Minimum Requirements
 
-### Before (Problems)
-- ❌ Mixed provider configurations in single file
-- ❌ Placeholder values hardcoded in dev environment
-- ❌ No clean provider switching mechanism
-- ❌ Limited debugging capabilities
-- ❌ Secrets mixed with configuration
-- ❌ Tight coupling between components
+- **OS**: Linux (Ubuntu 20.04+ recommended), macOS, or Windows with WSL2
+- **Memory**: 4GB RAM minimum, 8GB+ recommended
+- **Storage**: 2GB free space for Docker images
+- **Docker**: Version 20.10+ with Docker Compose V2
 
-### After (Solutions)
-- ✅ Clean provider separation with dedicated configs
-- ✅ Secrets properly separated and gitignored
-- ✅ Single command provider switching
-- ✅ Enhanced debug containers with curl and network tools
-- ✅ Comprehensive validation and testing utilities
-- ✅ IAC principles with version-controlled infrastructure
-- ✅ Modular architecture with clear separation of concerns
+### Port Usage
 
----
+| Port | Service | Binding | Purpose |
+|------|---------|---------|---------|
+| 9080 | APISIX Gateway | 0.0.0.0 | Main API gateway |
+| 9180 | APISIX Admin | 127.0.0.1 | Admin API (localhost-only for security) |
+| 3001 | Portal Backend | 0.0.0.0 | Self-service API key management |
+| 8080 | Keycloak | 0.0.0.0 | Local OIDC provider (when using keycloak) |
+| 2379 | etcd | container-only | Configuration storage |
 
-This implementation provides a robust, maintainable, and scalable foundation for APISIX Gateway with multi-provider OIDC support following Infrastructure-as-Code best practices.
+## 💻 CLI Usage
+
+### Gateway CLI Commands
+
+The CLI provides a unified interface for all gateway operations:
+
+#### Core Operations
+```bash
+./gw up dev|test               # Start infrastructure
+./gw down dev|test             # Stop environment
+./gw reset dev|test            # Complete reset: down → up → bootstrap → verify
+./gw bootstrap dev|test        # Deploy routes using proven bootstrap-core.sh
+```
+
+#### Diagnostics and Monitoring
+```bash
+./gw status [dev|test]         # Container status, service health, routes
+./gw env dev|test              # Show environment configuration
+./gw doctor dev|test           # Comprehensive health checks and diagnostics
+./gw logs dev|test [service]   # View service logs with follow/tail options
+./gw routes dev|test           # List and inspect configured APISIX routes
+```
+
+### CLI Examples
+
+#### Complete Environment Reset
+```bash
+# Reset entire dev environment (the "gold standard" operation)
+./gw reset dev
+
+# Reset with volume cleanup
+./gw reset dev --clean
+
+# Include provider routes (requires AI API keys)
+./gw reset dev --with-providers
+```
+
+#### Monitoring and Debugging
+```bash
+# Check overall system health
+./gw doctor dev
+
+# View detailed routes with upstreams and plugins
+./gw routes dev --detailed
+
+# Follow APISIX logs in real-time
+./gw logs dev apisix --follow
+
+# Check environment variables and configuration
+./gw env dev
+```
+
+#### Step-by-Step Control
+```bash
+# Manual workflow
+./gw down dev --clean
+./gw up dev
+./gw bootstrap dev --core-only
+./gw status dev
+```
+
+### Safety Features
+
+- **Explicit Environment Targeting**: Always specify `dev` or `test` - no dangerous defaults
+- **Safe Cleanup**: Project-only cleanup by default with `--clean`
+- **Global Cleanup Warning**: `--prune-global` requires explicit confirmation
+- **Core vs Provider Routes**: `--core-only` (default) vs `--with-providers` for graceful API key handling
+
+### Installation
+
+The CLI uses a Python virtual environment with all dependencies managed automatically:
+
+```bash
+# CLI wrapper handles virtual environment activation
+./gw --help
+
+# Manual virtual environment setup (if needed)
+python3 -m venv cli/venv
+source cli/venv/bin/activate
+pip install -r cli/requirements.txt
+```
+
+See [CLI_USAGE.md](CLI_USAGE.md) for complete documentation.
+
+## 🏗️ Architecture Overview
+
+### Core Components
+
+```
+Internet → Apache (443/80) → APISIX Gateway → Portal Backend → Services
+                ↓
+        OIDC Authentication:
+        - Microsoft EntraID (Production)
+        - Keycloak (Local Development)
+```
+
+### Service Architecture
+
+- **APISIX Gateway**: Core API gateway with OIDC routing and AI provider proxying
+- **Portal Backend**: Python Flask self-service API key management
+- **etcd**: Configuration store for APISIX
+- **Multi-Provider OIDC**: Switchable authentication backends
+
+### Network Security Model
+
+- **Public Access**: Gateway (9080) and Portal (3001) - OIDC protected
+- **Internal Only**: Admin API (9180) - localhost binding for security
+- **Container Network**: etcd (2379) - isolated within Docker network
+
+## ⚙️ Configuration
+
+### Environment Structure
+
+The system uses hierarchical configuration loading:
+
+```
+config/
+├── shared/           # Common APISIX settings
+│   ├── base.env     # Core configuration
+│   └── apisix.env   # APISIX admin keys
+├── providers/       # Provider-specific configs
+│   ├── entraid/     # Microsoft EntraID settings
+│   └── keycloak/    # Keycloak settings
+├── env/             # Environment-specific settings
+│   ├── dev.env      # Development ports/settings
+│   └── test.env     # Test environment settings
+└── secrets/         # Credentials (gitignored)
+    └── entraid-dev.env  # EntraID secrets
+```
+
+### Provider Configuration
+
+#### Microsoft EntraID (Recommended)
+
+1. Update your secrets file:
+```bash
+cp secrets/entraid-dev.env.example secrets/entraid-dev.env
+# Edit with your actual EntraID credentials
+```
+
+2. Configure your EntraID app registration:
+   - Redirect URI: `https://your-domain.com/portal/callback`
+   - Required API permissions for user profile access
+
+#### Keycloak (Local Development)
+
+Keycloak runs automatically with default admin credentials (admin/admin) when using the keycloak provider.
+
+## 📖 Usage Examples
+
+### Portal Access (OIDC Authentication Required)
+
+```bash
+# Access portal (triggers OIDC authentication flow)
+curl -I http://localhost:9080/portal/
+
+# Generate API key (after OIDC login)
+curl -X POST \
+     -H "X-User-Oid: user-123" \
+     http://localhost:9080/portal/get-key
+```
+
+### AI Provider API Usage (API Key Required)
+
+```bash
+# Anthropic Claude API
+curl -X POST http://localhost:9080/v1/providers/anthropic/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "claude-3-sonnet-20240229",
+    "max_tokens": 100,
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+
+# OpenAI GPT API
+curl -X POST http://localhost:9080/v1/providers/openai/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+
+# LiteLLM (Local Models)
+curl -X POST http://localhost:9080/v1/providers/litellm/chat \
+  -H "Content-Type: application/json" \
+  -H "apikey: YOUR-API-KEY" \
+  -d '{
+    "model": "ollama/llama3.3",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+## 🔒 Security Features
+
+### Current Security Measures
+
+- ✅ **Admin API Security**: Bound to localhost only (`127.0.0.1:9180`)
+- ✅ **OIDC Authentication**: Full OpenID Connect flow for portal access
+- ✅ **API Key Authentication**: Secure CSPRNG key generation for API access
+- ✅ **Network Isolation**: Proper container networking and port binding
+- ✅ **Secret Management**: Gitignored secrets with example templates
+- ✅ **Header Security**: Proper OIDC header injection and validation
+
+### Security Model
+
+1. **Portal Access**: OIDC authentication required → Header injection → Portal backend
+2. **API Usage**: API key validation → Provider-specific header injection → Upstream proxy
+3. **Admin Access**: Localhost-only binding prevents external admin API access
+
+### Production Security Checklist
+
+- [ ] Update all placeholder secrets with production values
+- [ ] Configure TLS termination (Apache/nginx reverse proxy)
+- [ ] Set up proper DNS with valid SSL certificates
+- [ ] Configure rate limiting for API endpoints
+- [ ] Set up monitoring and alerting
+- [ ] Regular security updates for container images
+
+## 🐛 Troubleshooting
+
+### CLI Troubleshooting (Recommended)
+
+The CLI provides comprehensive diagnostics:
+
+```bash
+# Quick health check
+./gw doctor dev
+
+# Check system status
+./gw status dev
+
+# View environment configuration
+./gw env dev
+
+# Check logs for errors
+./gw logs dev apisix --tail 50
+
+# View route configuration
+./gw routes dev --detailed
+```
+
+### Common Issues
+
+#### Services Won't Start
+```bash
+# CLI approach (recommended)
+./gw doctor dev           # Comprehensive diagnostics
+./gw status dev          # Container and service status
+./gw logs dev apisix     # View APISIX logs
+
+# Manual approach
+docker info              # Check Docker daemon
+ss -lntp | grep ':908[01]'  # Check port conflicts
+docker logs apisix-dev-apisix-1  # View startup logs
+```
+
+#### OIDC Authentication Fails
+```bash
+# CLI approach (recommended)
+./gw env dev             # Check all OIDC configuration
+./gw doctor dev          # Run authentication tests
+./gw routes dev --route-id portal-oidc-route  # Check OIDC route
+
+# Manual approach
+curl $OIDC_DISCOVERY_ENDPOINT  # Test discovery endpoint
+echo $OIDC_REDIRECT_URI        # Verify redirect URI
+curl -H "X-API-KEY: $ADMIN_KEY" http://localhost:9180/apisix/admin/routes/portal-oidc-route
+```
+
+#### Environment Variables Missing
+```bash
+# CLI approach (recommended)
+./gw env dev             # Show all environment variables and sources
+
+# Manual approach
+source scripts/core/environment.sh
+setup_environment "entraid" "dev"
+printenv | grep -E "(OIDC|ADMIN|APISIX)"
+```
+
+#### Complete System Reset
+```bash
+# CLI approach (recommended - single command)
+./gw reset dev --clean
+
+# Manual approach
+./scripts/lifecycle/stop.sh
+./scripts/lifecycle/start.sh --provider entraid --force-recreate
+./scripts/bootstrap/bootstrap-core.sh dev
+```
+
+### Debug Mode
+
+Start with debug tools for troubleshooting:
+
+```bash
+./scripts/lifecycle/start.sh --provider entraid --debug
+
+# Access debug toolkit
+docker exec -it apisix-debug-toolkit bash
+
+# Access HTTP client
+docker exec -it apisix-http-client sh
+```
+
+### Testing Framework
+
+Run comprehensive behavior tests:
+
+```bash
+# End-to-end behavior tests
+./scripts/testing/behavior-test.sh
+
+# OIDC flow testing
+./scripts/testing/test-oidc-flow.sh
+
+# Portal backend API tests
+./scripts/testing/test-portal-backend.sh
+```
+
+## 📚 Documentation
+
+### Available Documentation
+
+- **[CLI_USAGE.md](CLI_USAGE.md)**: Complete CLI usage guide and command reference
+- **[SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)**: Complete technical architecture documentation
+- **[MAINTAINERS_GUIDE.md](MAINTAINERS_GUIDE.md)**: Detailed maintenance and operations guide
+- **[PORTAL_DEVELOPMENT.md](docs/PORTAL_DEVELOPMENT.md)**: Portal backend development guide
+- **[API.md](docs/API.md)**: API endpoints and usage documentation
+- **[TLS_SETUP.md](docs/TLS_SETUP.md)**: TLS termination and SSL configuration
+
+### CLI and Script Documentation
+
+- **`./gw --help`**: Interactive CLI command reference
+- `cli/`: Python CLI implementation with Typer framework
+- `scripts/lifecycle/`: Start/stop environment management
+- `scripts/bootstrap/`: APISIX route configuration
+- `scripts/testing/`: Comprehensive testing framework
+- `scripts/debug/`: Debugging and inspection tools
+- `scripts/core/environment.sh`: Configuration loading system
+
+## 🤝 Contributing
+
+### Development Workflow
+
+1. **Fork and Clone**: Fork the repository and clone locally
+2. **Environment Setup**: Use Keycloak for local development
+3. **Make Changes**: Follow existing code patterns and architecture
+4. **Test Thoroughly**: Run all test suites before submitting
+5. **Documentation**: Update documentation for any architectural changes
+
+### Code Standards
+
+- **Scripts**: Use `set -euo pipefail` and proper error handling
+- **Configuration**: Follow hierarchical config loading pattern
+- **Security**: Never commit secrets, use proper authentication flows
+- **Docker**: Use modular compose files with service profiles
+
+### Testing Requirements
+
+Before submitting PRs, ensure all tests pass:
+
+```bash
+# CLI approach (recommended)
+./gw reset dev              # Test dev environment reset
+./gw doctor dev             # Run comprehensive health checks
+./gw reset test             # Test test environment reset
+./gw doctor test            # Run comprehensive health checks
+
+# Manual approach
+./scripts/testing/behavior-test.sh  # Run full behavior test suite
+
+# Test both providers
+./scripts/lifecycle/start.sh --provider keycloak
+./scripts/testing/test-oidc-flow.sh
+./scripts/lifecycle/start.sh --provider entraid
+./scripts/testing/test-oidc-flow.sh
+```
+

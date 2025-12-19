@@ -1,0 +1,14 @@
+{
+  "id": "premium_user",
+  "plugins": {
+    "limit-count": {
+      "count": 50000,
+      "time_window": 604800,
+      "rejected_code": 429,
+      "rejected_msg": "Weekly premium quota exceeded. Limit resets every 7 days.",
+      "key_type": "var",
+      "key": "consumer_name",
+      "show_limit_quota_header": true
+    }
+  }
+}

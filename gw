@@ -1,0 +1,29 @@
+#!/bin/bash
+# APISIX Gateway CLI wrapper
+# This script activates the virtual environment and runs the CLI
+
+set -e
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_DIR="$SCRIPT_DIR/cli"
+VENV_DIR="$CLI_DIR/venv"
+
+# Check if virtual environment exists
+if [ ! -d "$VENV_DIR" ]; then
+    echo "❌ Virtual environment not found at: $VENV_DIR"
+    echo "💡 Run: python3 -m venv cli/venv && source cli/venv/bin/activate && pip install -r cli/requirements.txt"
+    exit 1
+fi
+
+# Check if virtual environment has the required packages
+if [ ! -f "$VENV_DIR/bin/python" ] || ! "$VENV_DIR/bin/python" -c "import typer" 2>/dev/null; then
+    echo "❌ Virtual environment missing required packages"
+    echo "💡 Run: source cli/venv/bin/activate && pip install -r cli/requirements.txt"
+    exit 1
+fi
+
+# Activate virtual environment and run CLI
+cd "$SCRIPT_DIR"
+source "$VENV_DIR/bin/activate"
+python "$CLI_DIR/gw.py" "$@"
