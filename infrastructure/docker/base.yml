@@ -51,6 +51,8 @@ services:
       # Port mapping controlled by environment variables
       - "127.0.0.1:${APISIX_HOST_GATEWAY_PORT:-9080}:9080"
       - "127.0.0.1:${APISIX_HOST_ADMIN_PORT:-9180}:9180"
+    sysctls:                                                                                                    
+      - net.ipv6.conf.all.disable_ipv6=1 
     environment:
       - CUSTOM_PROFILE=${ENVIRONMENT:-dev}
       - ADMIN_KEY=${ADMIN_KEY}
@@ -77,7 +79,7 @@ services:
       - apisix
     volumes:
       - ../../:/opt/apisix-gateway:ro
-    user: "${UID:-364274}:${GID:-364274}"
+    user: "${HOST_UID:-364274}:${HOST_GID:-364274}"
     environment:
       # Core configuration
       - ADMIN_KEY=${ADMIN_KEY}

@@ -59,6 +59,8 @@ nginx_config:
     keepalive_timeout: "60s"
     client_max_body_size: "0"
     chunked_transfer_encoding: "on"
+    resolver: "127.0.0.11 ipv6=off"
+    resolver_timeout: 5
 
     lua_shared_dict:
       prometheus-metrics: "5m"

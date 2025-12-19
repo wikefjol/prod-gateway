@@ -145,7 +145,9 @@ validate_provider_config() {
             validate_entraid_config
             ;;
         "keycloak")
-            validate_keycloak_config
+            # Keycloak validation simplified since not actively used
+            log_debug "Keycloak validation skipped - using minimal checks"
+            require_vars "OIDC_CLIENT_ID" "OIDC_CLIENT_SECRET"
             ;;
         *)
             log_error "Unknown provider for validation: $provider"
@@ -180,20 +182,7 @@ validate_entraid_config() {
     fi
 }
 
-validate_keycloak_config() {
-    log_debug "Validating Keycloak configuration"
-
-    local required_vars=(
-        "OIDC_CLIENT_ID"
-        "OIDC_CLIENT_SECRET"
-        "OIDC_DISCOVERY_ENDPOINT"
-        "OIDC_REDIRECT_URI"
-        "OIDC_SESSION_SECRET"
-        "KEYCLOAK_ADMIN_URL"
-    )
-
-    require_vars "${required_vars[@]}"
-}
+# Keycloak validation removed - simplified to minimal inline checks
 
 # Main configuration setup function
 setup_environment() {
@@ -209,10 +198,10 @@ setup_environment() {
 
     log_info "Setting up $environment environment with $provider provider"
 
-    # Load configuration in order: shared -> secrets -> provider
-    # (secrets loaded before provider so provider config can reference secret variables)
-    load_shared_config
+    # Load configuration in order: secrets -> shared -> provider
+    # (secrets loaded first so both shared and provider config can reference secret variables)
     load_secrets "$provider" "$environment"
+    load_shared_config
     load_provider_config "$provider" "$environment"
 
     # Validate configuration
@@ -221,6 +210,23 @@ setup_environment() {
     # Export provider info for other scripts
     export OIDC_PROVIDER_NAME="$provider"
     export ENVIRONMENT="$environment"
+
+    # Set environment-specific admin API URLs and backend hosts
+    if [[ "$environment" == "test" ]]; then
+        export APISIX_ADMIN_API="http://localhost:9181/apisix/admin"
+        export APISIX_ADMIN_PORT="9181"
+        export DATA_PLANE="http://localhost:9081"
+        export ADMIN_API="http://localhost:9181/apisix/admin"
+        export PORTAL_BACKEND_HOST="apisix-test-portal-backend-1:3000"
+        export BACKEND_HOST="apisix-test-portal-backend-1:3000"
+    else
+        export APISIX_ADMIN_API="http://localhost:9180/apisix/admin"
+        export APISIX_ADMIN_PORT="9180"
+        export DATA_PLANE="http://localhost:9080"
+        export ADMIN_API="http://localhost:9180/apisix/admin"
+        export PORTAL_BACKEND_HOST="apisix-dev-portal-backend-1:3000"
+        export BACKEND_HOST="apisix-dev-portal-backend-1:3000"
+    fi
 
     # Export all Docker Compose variables
     export ADMIN_KEY
@@ -243,8 +249,8 @@ setup_environment() {
     export BACKEND_HOST
     export KEYCLOAK_ADMIN_URL
     export APISIX_NETWORK_CONTEXT
-    export UID
-    export GID
+    export HOST_UID
+    export HOST_GID
 
     # Generate complete environment file for Docker Compose
     generate_complete_env_file "$provider" "$environment"
@@ -418,6 +424,6 @@ ensure_environment() {
 # Export functions for use by other scripts
 export -f log_info log_success log_warning log_error log_debug
 export -f require_vars load_shared_config load_provider_config load_secrets
-export -f validate_provider_config validate_entraid_config validate_keycloak_config
+export -f validate_provider_config validate_entraid_config
 export -f setup_environment generate_compose_command ensure_environment
 export -f generate_complete_env_file list_available_providers show_current_config

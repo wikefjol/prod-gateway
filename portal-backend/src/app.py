@@ -212,13 +212,14 @@ class APISIXClient:
             "labels": {
                 "source": "oidc-portal-v0",
                 "created_at": datetime.utcnow().isoformat()
-            }
+            },
+            "group_id": "base_user"
         }
 
         response = self._make_request('PUT', f'consumers/{user_oid}', consumer_data)
         created_consumer = response.json()
 
-        logger.info(f"Created consumer for user_oid: {user_oid}, name: {user_name}")
+        logger.info(f"Created consumer for user_oid: {user_oid}, name: {user_name}, assigned to base_user group")
         return created_consumer['value'] if 'value' in created_consumer else created_consumer
 
     def get_consumer_credentials(self, user_oid: str) -> List[Dict[str, Any]]:
@@ -325,6 +326,61 @@ class APISIXClient:
         logger.info(f"Updated key-auth credential for user_oid: {user_oid}, key_fingerprint: {key_fingerprint}")
 
         return {"id": "key-auth", "key": api_key}
+
+    def update_consumer_group(self, user_oid: str, new_group_id: str) -> Dict[str, Any]:
+        """Update consumer's group assignment
+
+        Args:
+            user_oid: Consumer username
+            new_group_id: New consumer group ID (e.g., "premium_user")
+
+        Returns:
+            Updated consumer data
+        """
+        # Get current consumer data
+        response = self._make_request('GET', f'consumers/{user_oid}')
+        consumer_data = response.json()['value']
+
+        # Remove ETCD metadata fields that are forbidden in updates
+        consumer_update = {
+            "username": consumer_data["username"],
+            "desc": consumer_data.get("desc", ""),
+            "labels": consumer_data.get("labels", {}),
+            "plugins": consumer_data.get("plugins", {}),
+            "group_id": new_group_id
+        }
+
+        # Update consumer
+        response = self._make_request('PUT', f'consumers/{user_oid}', consumer_update)
+        updated_consumer = response.json()
+
+        logger.info(f"Updated consumer {user_oid} group assignment to: {new_group_id}")
+        return updated_consumer['value'] if 'value' in updated_consumer else updated_consumer
+
+    def migrate_consumer_to_base_group(self, user_oid: str) -> bool:
+        """Migrate existing consumer to base_user group
+
+        Args:
+            user_oid: Consumer username
+
+        Returns:
+            True if successful, False if consumer not found
+        """
+        try:
+            # Check if consumer exists
+            consumer = self.find_consumer(user_oid)
+            if not consumer:
+                return False
+
+            # Only update if not already in a group
+            if consumer.get('group_id') is None:
+                self.update_consumer_group(user_oid, 'base_user')
+                logger.info(f"Migrated consumer {user_oid} to base_user group")
+
+            return True
+        except Exception as e:
+            logger.error(f"Failed to migrate consumer {user_oid}: {e}")
+            return False
 
 class PortalService:
     """Main portal service implementing the self-service API key logic"""

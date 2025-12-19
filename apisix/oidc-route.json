@@ -1,6 +1,6 @@
 {
   "id": "oidc-auth-callback",
-  "uri": "/v1/auth/oidc/callback",
+  "uri": "/portal/callback",
   "methods": ["GET", "POST"],
   "plugins": {
     "openid-connect": {

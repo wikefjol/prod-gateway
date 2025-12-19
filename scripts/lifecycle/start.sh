@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Configuration defaults
-PROVIDER=${OIDC_PROVIDER_NAME:-"keycloak"}
+PROVIDER=${OIDC_PROVIDER_NAME:-"entraid"}
 ENVIRONMENT=${ENVIRONMENT:-"dev"}
 PROJECT=${COMPOSE_PROJECT_NAME:-"apisix-${ENVIRONMENT}"}
 DEBUG_MODE=${DEBUG_MODE:-false}
@@ -35,18 +35,18 @@ OPTIONS:
     -h, --help                  Show this help message
 
 ENVIRONMENT VARIABLES:
-    OIDC_PROVIDER_NAME          Override provider (default: keycloak)
+    OIDC_PROVIDER_NAME          Override provider (default: entraid)
     ENVIRONMENT                 Override environment (default: dev)
     COMPOSE_PROJECT_NAME        Override project name
     DEBUG_MODE                  Enable debug mode (default: false)
     FORCE_RECREATE             Force container recreation (default: false)
 
 EXAMPLES:
-    # Start with Keycloak (default)
+    # Start with EntraID (default)
     $0
 
-    # Start with EntraID
-    $0 --provider entraid
+    # Start with Keycloak (if needed)
+    $0 --provider keycloak
 
     # Start with debug mode
     $0 --provider entraid --debug
@@ -154,6 +154,44 @@ stop_existing() {
     log_success "Existing containers stopped for project: $PROJECT"
 }
 
+# Validate required environment variables to prevent Docker Compose warnings
+validate_compose_env_vars() {
+    local required_vars=(
+        "ADMIN_KEY"
+        "VIEWER_KEY"
+        "ETCD_HOST"
+        "ENVIRONMENT"
+        "APISIX_HOST_GATEWAY_PORT"
+        "APISIX_HOST_ADMIN_PORT"
+        "OIDC_CLIENT_ID"
+        "OIDC_CLIENT_SECRET"
+        "OIDC_DISCOVERY_ENDPOINT"
+        "OIDC_REDIRECT_URI"
+        "OIDC_SESSION_SECRET"
+        "OIDC_PROVIDER_NAME"
+    )
+
+    local missing_vars=()
+    for var in "${required_vars[@]}"; do
+        if [[ -z "${!var:-}" ]]; then
+            missing_vars+=("$var")
+        fi
+    done
+
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        log_error "FAIL FAST: Required environment variables are missing:"
+        for var in "${missing_vars[@]}"; do
+            log_error "  - $var"
+        done
+        log_error ""
+        log_error "This will cause Docker Compose to show warnings about defaulting to blank strings."
+        log_error "Environment setup failed - check your configuration files and secrets."
+        return 1
+    fi
+
+    log_info "✅ All required environment variables are set"
+}
+
 # Start services
 start_services() {
     log_info "Starting APISIX Gateway infrastructure..."
@@ -186,6 +224,9 @@ start_services() {
     if [[ "$FORCE_RECREATE" == "true" ]]; then
         up_args+=(--force-recreate)
     fi
+
+    # Fail-fast validation: ensure required vars are set to prevent Docker Compose warnings
+    validate_compose_env_vars
 
     # Execute compose command (updated service names without -dev suffix)
     log_info "Executing: ${compose_cmd[*]} ${up_args[*]} etcd apisix loader portal-backend"
@@ -288,6 +329,11 @@ show_status() {
     echo "  Project: $PROJECT"
     echo "  Debug Mode: $DEBUG_MODE"
     echo ""
+    # Load port information from complete env file
+    if [[ -f "$COMPOSE_ENV_FILE" ]]; then
+        source "$COMPOSE_ENV_FILE"
+    fi
+
     echo "Services:"
     echo "  🌐 APISIX Gateway:    http://localhost:${APISIX_HOST_GATEWAY_PORT:-9080}"
     echo "  🔧 APISIX Admin:      http://localhost:${APISIX_HOST_ADMIN_PORT:-9180}"

@@ -1,0 +1,14 @@
+{
+  "id": "base_user",
+  "plugins": {
+    "limit-count": {
+      "count": 10000,
+      "time_window": 604800,
+      "rejected_code": 429,
+      "rejected_msg": "Weekly quota exceeded. Limit resets every 7 days. Contact admin for upgrade.",
+      "key_type": "var",
+      "key": "consumer_name",
+      "show_limit_quota_header": true
+    }
+  }
+}
