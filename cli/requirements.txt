@@ -1,9 +1,0 @@
-# APISIX Gateway CLI Dependencies
-# Core CLI framework
-typer>=0.9.0
-
-# Rich output for better UX
-rich>=13.0.0
-
-# HTTP requests for API communication
-requests>=2.31.0
