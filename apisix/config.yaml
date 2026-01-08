@@ -1,0 +1,39 @@
+apisix:
+  enable_ipv6: false
+  dns_resolver:
+    - 127.0.0.11
+  dns_resolver_valid: 30
+
+deployment:
+  role: traditional
+  admin:
+    admin_key:
+      - name: admin
+        key: ${{ADMIN_KEY}}
+        role: admin
+      - name: viewer
+        key: ${{VIEWER_KEY}}
+        role: viewer
+
+    allow_admin:
+      - 127.0.0.1
+      - ::1
+      - 129.16.0.0/16
+      - 172.16.0.0/12
+
+  enable_admin_ui: true
+
+etcd:
+  host:
+    - "http://etcd:2379"
+  prefix: "/apisix"
+  timeout: 30
+
+plugins:
+  - proxy-rewrite
+  - limit-count
+  - cors
+  - key-auth
+  - openid-connect
+  - consumer-restriction
+  - redirect

@@ -1,0 +1,17 @@
+{
+  "id": "health-route",
+  "uri": "/health",
+  "methods": ["GET", "HEAD"],
+  "plugins": {
+    "serverless-pre-function": {
+      "phase": "access",
+      "functions": ["return ngx.say('ok')"]
+    },
+    "response-rewrite": {
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain"
+      }
+    }
+  }
+}

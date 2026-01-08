@@ -1,0 +1,17 @@
+{
+  "id": "health-simple",
+  "uri": "/health",
+  "methods": ["GET", "HEAD"],
+  "upstream": {
+    "type": "roundrobin",
+    "nodes": {
+      "httpbin.org:443": 1
+    },
+    "scheme": "https"
+  },
+  "plugins": {
+    "proxy-rewrite": {
+      "uri": "/status/200"
+    }
+  }
+}
