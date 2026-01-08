@@ -1,0 +1,11 @@
+{
+  "id": "portal-redirect-route",
+  "uri": "/portal",
+  "methods": ["GET", "HEAD"],
+  "plugins": {
+    "redirect": {
+      "uri": "/portal/",
+      "ret_code": 302
+    }
+  }
+}

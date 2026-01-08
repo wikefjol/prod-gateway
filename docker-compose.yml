@@ -1,0 +1,87 @@
+# APISIX Gateway - Base Services
+# Use with environment-specific override files:
+# docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# docker-compose -f docker-compose.yml -f docker-compose.test.yml up
+
+networks:
+  apisix:
+    driver: bridge
+
+volumes:
+  etcd_data:
+    driver: local
+  apisix_logs:
+    driver: local
+
+services:
+  # etcd - Configuration store for APISIX
+  etcd:
+    image: bitnamilegacy/etcd:3.5.11
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    volumes:
+      - etcd_data:/bitnami/etcd
+    networks:
+      - apisix
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # APISIX Gateway - API Gateway with OIDC support
+  apisix:
+    build:
+      context: ./apisix
+      dockerfile: Dockerfile
+    depends_on:
+      etcd:
+        condition: service_healthy
+    networks:
+      - apisix
+    # dns:
+    #  - 8.8.8.8
+    #  - 1.1.1.1
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
+    environment:
+      - ADMIN_KEY=${ADMIN_KEY}
+      - VIEWER_KEY=${VIEWER_KEY}
+      - ETCD_HOST=http://etcd:2379
+      - ENVIRONMENT=${ENVIRONMENT}
+      - CUSTOM_PROFILE=${ENVIRONMENT}
+    volumes:
+      - apisix_logs:/usr/local/apisix/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /usr/local/apisix/logs/nginx.pid && kill -0 $(cat /usr/local/apisix/logs/nginx.pid) 2>/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  # Portal Backend - Self-Service API Key Management
+  portal-backend:
+    build:
+      context: ./portal-backend
+      dockerfile: Dockerfile
+    depends_on:
+      apisix:
+        condition: service_healthy
+    networks:
+      - apisix
+    environment:
+      - ADMIN_KEY=${ADMIN_KEY}
+      - APISIX_ADMIN_API=${APISIX_ADMIN_API}
+      - ENVIRONMENT=${ENVIRONMENT}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

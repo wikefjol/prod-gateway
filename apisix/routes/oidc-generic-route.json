@@ -1,0 +1,29 @@
+{
+  "id": "portal-oidc-route",
+  "uris": ["/portal/", "/portal/*"],
+  "methods": ["GET", "POST", "HEAD"],
+  "plugins": {
+    "openid-connect": {
+      "client_id": "$OIDC_CLIENT_ID",
+      "client_secret": "$OIDC_CLIENT_SECRET",
+      "discovery": "$OIDC_DISCOVERY_ENDPOINT",
+      "scope": "openid profile email",
+      "redirect_uri": "$OIDC_REDIRECT_URI",
+      "bearer_only": false,
+      "ssl_verify": false,
+      "timeout": 3,
+      "session": {
+        "secret": "$OIDC_SESSION_SECRET"
+      },
+      "set_userinfo_header": true,
+      "set_id_token_header": true,
+      "set_access_token_header": true
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "nodes": {
+      "$PORTAL_BACKEND_HOST": 1
+    }
+  }
+}

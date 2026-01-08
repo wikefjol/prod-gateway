@@ -1,0 +1,28 @@
+{
+  "id": "provider-anthropic-chat",
+  "uri": "/v1/providers/anthropic/chat",
+  "methods": ["POST"],
+  "plugins": {
+    "key-auth": {
+      "header": "X-API-Key"
+    },
+    "proxy-rewrite": {
+      "uri": "/v1/messages",
+      "headers": {
+        "set": {
+          "x-api-key": "$ANTHROPIC_API_KEY",
+          "anthropic-version": "2023-06-01"
+        },
+        "remove": ["X-API-Key"]
+      }
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "scheme": "https",
+    "nodes": {
+      "api.anthropic.com:443": 1
+    },
+    "pass_host": "node"
+  }
+}

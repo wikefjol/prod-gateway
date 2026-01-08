@@ -1,0 +1,14 @@
+# APISIX Gateway - Development Environment Overrides
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  apisix:
+    ports:
+      - "127.0.0.1:9080:9080"  # Gateway port
+      - "127.0.0.1:9180:9180"  # Admin API (localhost only for security)
+
+  portal-backend:
+    ports:
+      - "127.0.0.1:3001:3000"  # Portal backend (localhost only)
+    environment:
+      APISIX_ADMIN_API_CONTAINER: "http://apisix:9180/apisix/admin"
