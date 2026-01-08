@@ -27,7 +27,11 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Claude Code plans (user-specific)
-.claude/
 2025-12-03_state.md
 .secrets/
+
+.env.dev
+.env.test
+
+# Claude Code plans (user-specific)
+.claude/
