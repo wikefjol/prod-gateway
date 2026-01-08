@@ -3,14 +3,24 @@
   "uri": "/v1/providers/openai/chat",
   "methods": ["POST"],
   "plugins": {
-    "key-auth": {},
+    "key-auth": {
+      "header": "X-Gateway-Key",
+      "hide_credentials": true
+    },
     "proxy-rewrite": {
       "uri": "/v1/responses",
       "headers": {
+        "remove": [
+          "Origin",
+          "Referer",
+          "Cookie",
+          "Sec-Fetch-Site",
+          "Sec-Fetch-Mode",
+          "Sec-Fetch-Dest"
+        ],
         "set": {
           "Authorization": "Bearer $OPENAI_API_KEY"
-        },
-        "remove": ["apikey"]
+        }
       }
     }
   },
