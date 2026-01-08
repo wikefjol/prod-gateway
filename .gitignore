@@ -35,3 +35,11 @@ Thumbs.db
 
 # Claude Code plans (user-specific)
 .claude/
+
+.env.example
+CLAUDE.md
+notes_on_logs.md
+old/config-dev-static.yaml
+old/config-dev-template.yaml
+old/config-test-static.yaml
+old/config-test-template.yaml
