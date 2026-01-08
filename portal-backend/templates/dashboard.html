@@ -507,7 +507,7 @@
                 <li>Each user gets exactly one API key</li>
                 <li>Use the "Get Key" button to create your first key</li>
                 <li>Use the "Recycle Key" button to rotate your key if needed</li>
-                <li>Include your API key in requests using the <code>X-API-Key</code> header</li>
+                <li>Include your API key in requests using the <code>X-Gateway-Key</code> header</li>
                 {% if has_key %}<li>Use the test functionality above to verify your key is working</li>{% endif %}
             </ul>
         </div>
@@ -732,7 +732,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-API-Key': '[HIDDEN]'
+                        'X-Gateway-Key': '[HIDDEN]'
                     },
                     body: requestBody
                 };
@@ -742,7 +742,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-API-Key': currentApiKey
+                        'X-Gateway-Key': currentApiKey
                     },
                     body: JSON.stringify(requestBody)
                 });
@@ -787,7 +787,7 @@
                 showTestResults(`Network Error: ${error.message}`, {
                     url: '/v1/providers/anthropic/chat',
                     method: 'POST',
-                    headers: { 'X-API-Key': '[HIDDEN]' },
+                    headers: { 'X-Gateway-Key': '[HIDDEN]' },
                     body: 'Request failed before sending'
                 }, {
                     error: error.message

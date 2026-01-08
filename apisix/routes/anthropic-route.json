@@ -4,16 +4,24 @@
   "methods": ["POST"],
   "plugins": {
     "key-auth": {
-      "header": "X-API-Key"
-    },
+      "header": "X-Gateway-Key",
+      "hide_credentials": true
+      },
     "proxy-rewrite": {
       "uri": "/v1/messages",
       "headers": {
+        "remove": [
+          "Origin",
+          "Referer",
+          "Cookie",
+          "Sec-Fetch-Site",
+          "Sec-Fetch-Mode",
+          "Sec-Fetch-Dest"
+        ],
         "set": {
           "x-api-key": "$ANTHROPIC_API_KEY",
           "anthropic-version": "2023-06-01"
-        },
-        "remove": ["X-API-Key"]
+        }
       }
     }
   },
