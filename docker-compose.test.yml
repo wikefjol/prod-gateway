@@ -10,3 +10,5 @@ services:
   portal-backend:
     ports:
       - "127.0.0.1:3002:3000"  # Portal backend (localhost only)
+    environment:
+      APISIX_ADMIN_API_CONTAINER: "http://apisix:9180/apisix/admin"
