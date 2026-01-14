@@ -3,6 +3,7 @@ apisix:
   dns_resolver:
     - 127.0.0.11
   dns_resolver_valid: 30
+  extra_lua_path: "/usr/local/apisix/lua/?.lua"
 
 deployment:
   role: traditional
@@ -37,3 +38,4 @@ plugins:
   - openid-connect
   - consumer-restriction
   - redirect
+  - serverless-pre-function
