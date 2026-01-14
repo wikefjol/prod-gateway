@@ -75,6 +75,10 @@ PROVIDER_ROUTES=(
   "anthropic-route.json"
   "openai-route.json"
   "litellm-route.json"
+  "anthropic-messages.json"
+  "anthropic-count-tokens.json"
+  "openai-chat-completions-route.json"
+  "openai-models-route.json"
 )
 
 # -------------------------

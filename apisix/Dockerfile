@@ -16,9 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY config.yaml /usr/local/apisix/conf/config.yaml
 COPY entrypoint-simple.sh /docker-entrypoint-custom.sh
 
+# Copy custom Lua modules
+COPY lua /usr/local/apisix/lua
+
 RUN chmod +x /docker-entrypoint-custom.sh && \
     chown apisix:apisix /usr/local/apisix/conf/config.yaml && \
-    chown apisix:apisix /docker-entrypoint-custom.sh
+    chown apisix:apisix /docker-entrypoint-custom.sh && \
+    chown -R apisix:apisix /usr/local/apisix/lua
 
 USER apisix
 ENTRYPOINT ["/docker-entrypoint-custom.sh"]
