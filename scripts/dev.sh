@@ -1,6 +1,6 @@
 #!/bin/bash
 # APISIX Gateway - Development Environment Management
-# Usage: ./scripts/dev.sh [up|down|reset|status|logs|routes|bootstrap]
+# Usage: ./scripts/dev.sh [up|down|reset|status|logs|routes|bootstrap|build]
 
 set -euo pipefail
 
@@ -31,6 +31,29 @@ log_success() {
 
 log_error() {
     echo "❌ $*" >&2
+}
+
+log_warning() {
+    echo "⚠️  $*"
+}
+
+# Confirm destructive operation
+confirm_destructive_operation() {
+    local operation="$1"
+    echo
+    log_warning "DESTRUCTIVE OPERATION: $operation"
+    log_warning "This will DELETE ALL DATA including:"
+    echo "    - All consumers and their API keys"
+    echo "    - All custom configurations"
+    echo "    - All etcd stored data"
+    echo
+    echo "To confirm this operation, type DELETE (all caps):"
+    read -r confirmation
+    if [ "$confirmation" != "DELETE" ]; then
+        log_error "Operation cancelled"
+        exit 1
+    fi
+    log_info "Proceeding with destructive operation..."
 }
 
 # Check if services are running
@@ -64,22 +87,42 @@ case "${1:-help}" in
 
     down)
         log_info "Stopping development environment..."
-        docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down
         if [ "${2:-}" == "--clean" ]; then
-            log_info "Removing volumes and networks..."
+            confirm_destructive_operation "down --clean"
             docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down -v --remove-orphans
+            log_success "Development environment stopped and all data removed"
+        else
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down
+            log_success "Development environment stopped (data preserved)"
         fi
-        log_success "Development environment stopped"
         ;;
 
     reset)
-        log_info "Resetting development environment..."
-        $0 down ${2:---clean}
+        if [ "${2:-}" == "--clean" ]; then
+            log_info "Resetting development environment with data cleanup..."
+            confirm_destructive_operation "reset --clean"
+            $0 down --clean
+        else
+            log_info "Resetting development environment (preserving data)..."
+            $0 down
+        fi
         $0 up
         if wait_for_apisix; then
             $0 bootstrap
         fi
         log_success "Development environment reset complete"
+        ;;
+
+    build)
+        log_info "Building APISIX container..."
+        if [ "${2:-}" == "--no-cache" ]; then
+            log_info "Building without cache (clean build)..."
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build --no-cache apisix
+        else
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build apisix
+        fi
+        log_success "APISIX container built successfully"
+        log_info "Run '$0 up' to start with the new image"
         ;;
 
     status)
@@ -134,10 +177,12 @@ case "${1:-help}" in
         echo
         echo "Commands:"
         echo "  up          Start development environment"
-        echo "  down        Stop development environment"
-        echo "              --clean  Remove volumes and networks"
-        echo "  reset       Complete reset (down + up + bootstrap)"
-        echo "              --clean  Remove volumes before reset"
+        echo "  down        Stop development environment (preserves data)"
+        echo "              --clean  ⚠️  DESTRUCTIVE: Remove all data (requires confirmation)"
+        echo "  reset       Restart environment preserving data (down + up + bootstrap)"
+        echo "              --clean  ⚠️  DESTRUCTIVE: Full reset with data removal (requires confirmation)"
+        echo "  build       Build APISIX container with latest changes"
+        echo "              --no-cache  Force clean rebuild"
         echo "  status      Show environment status"
         echo "  logs        Show logs for all services"
         echo "              [service] Show logs for specific service"
@@ -146,8 +191,14 @@ case "${1:-help}" in
         echo "  bootstrap   Load routes into APISIX"
         echo "  help        Show this help message"
         echo
+        echo "⚠️  DESTRUCTIVE OPERATIONS (will delete all consumers and data):"
+        echo "  - down --clean"
+        echo "  - reset --clean"
+        echo
         echo "Examples:"
-        echo "  $0 reset --clean    # Complete reset with cleanup"
+        echo "  $0 reset            # Restart environment (keeps data)"
+        echo "  $0 reset --clean    # Full reset (⚠️  DELETES ALL DATA)"
+        echo "  $0 build --no-cache # Rebuild APISIX from scratch"
         echo "  $0 logs apisix -f   # Follow APISIX logs"
         echo "  $0 routes           # List all routes"
         ;;
