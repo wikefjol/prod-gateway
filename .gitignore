@@ -44,5 +44,7 @@ old/config-dev-static.yaml
 old/config-dev-template.yaml
 old/config-test-static.yaml
 old/config-test-template.yamlgateway-usage-examples.txt
+sdk_test_results/
 tmp_key_file.txt
 gateway-usage-examples.txt
+sdk_test_results/
