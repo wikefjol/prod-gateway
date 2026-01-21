@@ -1,12 +1,16 @@
 {
   "id": "anthropic-messages",
+  "name": "anthropic-messages",
   "uri": "/v1/messages",
   "methods": ["POST"],
   "plugins": {
     "serverless-pre-function": {
+      "_meta": {
+        "priority": 12020
+      },
       "phase": "rewrite",
       "functions": [
-        "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') return auth.bearer_to_api_key(conf, ctx) end"
+        "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') auth.sanitize_request_ids(conf, ctx) return auth.bearer_to_api_key(conf, ctx) end"
       ]
     },
     "key-auth": {
@@ -24,9 +28,25 @@
           "Sec-Fetch-Dest"
         ],
         "set": {
-          "x-api-key": "$ANTHROPIC_API_KEY"
+          "x-api-key": "$ANTHROPIC_API_KEY",
+          "anthropic-version": "2023-06-01"
         }
       }
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    },
+    "billing-extractor": {
+      "provider": "anthropic",
+      "endpoint": "messages"
+    },
+    "kafka-logger": {
+      "brokers": [{"host": "kafka", "port": 9092}],
+      "kafka_topic": "$KAFKA_TOPIC",
+      "batch_max_size": 1,
+      "include_req_body": false,
+      "include_resp_body": false
     }
   },
   "upstream": {

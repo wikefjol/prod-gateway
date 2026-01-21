@@ -47,4 +47,6 @@ old/config-test-template.yamlgateway-usage-examples.txt
 sdk_test_results/
 tmp_key_file.txt
 gateway-usage-examples.txt
-sdk_test_results/
+
+# Reference implementation (separate repo)
+llm_gateway_reference/

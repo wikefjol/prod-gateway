@@ -1,12 +1,16 @@
 {
   "id": "openai-chat-completions",
+  "name": "openai-chat-completions",
   "uri": "/v1/chat/completions",
   "methods": ["POST"],
   "plugins": {
     "serverless-pre-function": {
+      "_meta": {
+        "priority": 12020
+      },
       "phase": "rewrite",
       "functions": [
-        "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') return auth.bearer_to_api_key(conf, ctx) end"
+        "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') auth.sanitize_request_ids(conf, ctx) return auth.bearer_to_api_key(conf, ctx) end"
       ]
     },
     "key-auth": {
@@ -27,6 +31,27 @@
           "Authorization": "Bearer $OPENAI_API_KEY"
         }
       }
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    },
+    "billing-extractor": {
+      "provider": "openai",
+      "endpoint": "chat_completions"
+    },
+    "serverless-post-function": {
+      "phase": "header_filter",
+      "functions": [
+        "return function(conf, ctx) local gw_id = ngx.req.get_headers()['X-Request-Id'] if gw_id then ngx.header['X-Request-Id'] = gw_id end end"
+      ]
+    },
+    "kafka-logger": {
+      "brokers": [{"host": "kafka", "port": 9092}],
+      "kafka_topic": "$KAFKA_TOPIC",
+      "batch_max_size": 1,
+      "include_req_body": false,
+      "include_resp_body": false
     }
   },
   "upstream": {

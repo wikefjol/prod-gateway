@@ -5,6 +5,12 @@ apisix:
   dns_resolver_valid: 30
   extra_lua_path: "/usr/local/apisix/lua/?.lua"
 
+nginx_config:
+  http_configuration_snippet: |
+    # Prometheus shared dicts for kafka-logger dependency
+    lua_shared_dict prometheus-metrics 300m;
+    lua_shared_dict prometheus-cache 30m;
+
 deployment:
   role: traditional
   admin:
@@ -39,3 +45,7 @@ plugins:
   - consumer-restriction
   - redirect
   - serverless-pre-function
+  - serverless-post-function
+  - request-id
+  - kafka-logger
+  - billing-extractor

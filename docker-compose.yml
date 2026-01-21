@@ -12,6 +12,8 @@ volumes:
     driver: local
   apisix_logs:
     driver: local
+  kafka_data:
+    driver: local
 
 services:
   # etcd - Configuration store for APISIX
