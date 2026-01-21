@@ -14,6 +14,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ROUTES_DIR="$PROJECT_ROOT/apisix/routes"
 CONSUMER_GROUPS_DIR="$PROJECT_ROOT/apisix/consumer-groups"
+PLUGIN_METADATA_DIR="$PROJECT_ROOT/apisix/plugin-metadata"
 
 # Environment-specific admin API endpoints (host-side)
 if [ "$ENVIRONMENT" = "test" ]; then
@@ -171,9 +172,74 @@ load_route() {
   apisix_apply_json "route" "routes" "$route_path" "false" "true"
 }
 
+load_plugin_metadata() {
+  local metadata_file="$1"
+  local metadata_path="$PLUGIN_METADATA_DIR/$metadata_file"
+
+  if [ ! -f "$metadata_path" ]; then
+    log_error "Plugin metadata file not found: $metadata_path"
+    return 1
+  fi
+
+  local plugin_name payload response http_code body
+  plugin_name="$(jq -r '.id // empty' "$metadata_path" 2>/dev/null || true)"
+  # Only substitute specific env vars, preserving APISIX variables like $time_iso8601, $status, etc.
+  payload="$(envsubst '${ENVIRONMENT}' < "$metadata_path")"
+
+  if [ -z "$plugin_name" ]; then
+    log_error "Plugin metadata JSON missing required .id: $metadata_path"
+    return 1
+  fi
+
+  log_info "Applying plugin_metadata (PUT): $(basename "$metadata_path") (plugin=$plugin_name)"
+  response="$(curl -sS -w "\n%{http_code}" -X PUT "$ADMIN_API/plugin_metadata/$plugin_name" \
+    -H "Content-Type: application/json" \
+    -H "X-API-KEY: $ADMIN_KEY" \
+    -d "$payload")"
+
+  http_code="$(tail -n1 <<<"$response")"
+  body="$(sed '$d' <<<"$response")"
+
+  if [[ "$http_code" =~ ^(200|201)$ ]]; then
+    log_success "Applied plugin_metadata: $(basename "$metadata_path")"
+    return 0
+  else
+    log_error "Failed plugin_metadata: $(basename "$metadata_path") (HTTP $http_code)"
+    echo "$body" >&2
+    return 1
+  fi
+}
+
 # -------------------------
 # Bootstrap steps
 # -------------------------
+
+# Plugin metadata files to load
+PLUGIN_METADATA_FILES=(
+  "kafka-logger.json"
+)
+
+bootstrap_plugin_metadata() {
+  log_info "Loading plugin metadata..."
+  local ok=0 fail=0
+
+  for metadata in "${PLUGIN_METADATA_FILES[@]}"; do
+    if load_plugin_metadata "$metadata"; then
+      ok=$((ok + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done
+
+  log_info "Loaded $ok/${#PLUGIN_METADATA_FILES[@]} plugin metadata"
+
+  if [ "$fail" -ne 0 ]; then
+    log_error "Plugin metadata bootstrap failed ($fail failures)"
+    return 1
+  fi
+  return 0
+}
+
 bootstrap_consumer_groups() {
   log_info "Loading consumer groups..."
   local ok=0 fail=0
@@ -259,6 +325,11 @@ main() {
 
   # Required: consumer groups first (portal depends on base_user/premium_user)
   if ! bootstrap_consumer_groups; then
+    exit 1
+  fi
+
+  # Plugin metadata (kafka-logger log_format, etc.) - before routes
+  if ! bootstrap_plugin_metadata; then
     exit 1
   fi
 

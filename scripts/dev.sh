@@ -17,6 +17,12 @@ set +a
 
 ADMIN_API="${APISIX_ADMIN_API:-http://127.0.0.1:9180/apisix/admin}"
 
+# Common flags for clean, reproducible container lifecycle
+# --pull always      : Always pull latest base images
+# --force-recreate   : Recreate containers even if config/image unchanged
+# --remove-orphans   : Remove containers for services not defined in compose
+UP_FLAGS="--pull always --force-recreate --remove-orphans -d"
+
 # Change to project root
 cd "$PROJECT_ROOT"
 
@@ -77,8 +83,8 @@ wait_for_apisix() {
 
 case "${1:-help}" in
     up)
-        log_info "Starting development environment..."
-        docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" up -d
+        log_info "Starting development environment (clean start)..."
+        docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" up $UP_FLAGS
         log_success "Development environment started"
         log_info "Gateway: http://127.0.0.1:9080"
         log_info "Admin API: http://127.0.0.1:9180 (localhost only)"
@@ -92,7 +98,7 @@ case "${1:-help}" in
             docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down -v --remove-orphans
             log_success "Development environment stopped and all data removed"
         else
-            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" down --remove-orphans
             log_success "Development environment stopped (data preserved)"
         fi
         ;;
@@ -115,11 +121,12 @@ case "${1:-help}" in
 
     build)
         log_info "Building APISIX container..."
-        if [ "${2:-}" == "--no-cache" ]; then
-            log_info "Building without cache (clean build)..."
-            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build --no-cache apisix
+        if [ "${2:-}" == "--cache" ]; then
+            log_info "Building with cache (faster, use for minor changes)..."
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build --pull apisix
         else
-            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build apisix
+            log_info "Building without cache (clean build, ensures latest)..."
+            docker compose --project-name "$PROJECT_NAME" $COMPOSE_FILES --env-file "$ENV_FILE" build --no-cache --pull apisix
         fi
         log_success "APISIX container built successfully"
         log_info "Run '$0 up' to start with the new image"
@@ -176,13 +183,13 @@ case "${1:-help}" in
         echo "Usage: $0 [command]"
         echo
         echo "Commands:"
-        echo "  up          Start development environment"
-        echo "  down        Stop development environment (preserves data)"
+        echo "  up          Start development environment (force-recreate, pull latest, remove orphans)"
+        echo "  down        Stop development environment (preserves data, removes orphans)"
         echo "              --clean  ⚠️  DESTRUCTIVE: Remove all data (requires confirmation)"
         echo "  reset       Restart environment preserving data (down + up + bootstrap)"
         echo "              --clean  ⚠️  DESTRUCTIVE: Full reset with data removal (requires confirmation)"
-        echo "  build       Build APISIX container with latest changes"
-        echo "              --no-cache  Force clean rebuild"
+        echo "  build       Build APISIX container (default: no-cache + pull latest base)"
+        echo "              --cache   Use cache (faster for minor changes)"
         echo "  status      Show environment status"
         echo "  logs        Show logs for all services"
         echo "              [service] Show logs for specific service"
@@ -191,6 +198,12 @@ case "${1:-help}" in
         echo "  bootstrap   Load routes into APISIX"
         echo "  help        Show this help message"
         echo
+        echo "Lifecycle guarantees:"
+        echo "  - 'up' always uses: --pull always --force-recreate --remove-orphans"
+        echo "  - 'build' always uses: --no-cache --pull (unless --cache specified)"
+        echo "  - 'down' always uses: --remove-orphans"
+        echo "  This ensures running containers always match the current code."
+        echo
         echo "⚠️  DESTRUCTIVE OPERATIONS (will delete all consumers and data):"
         echo "  - down --clean"
         echo "  - reset --clean"
@@ -198,7 +211,8 @@ case "${1:-help}" in
         echo "Examples:"
         echo "  $0 reset            # Restart environment (keeps data)"
         echo "  $0 reset --clean    # Full reset (⚠️  DELETES ALL DATA)"
-        echo "  $0 build --no-cache # Rebuild APISIX from scratch"
+        echo "  $0 build            # Rebuild APISIX (clean, no cache)"
+        echo "  $0 build --cache    # Rebuild APISIX (with cache, faster)"
         echo "  $0 logs apisix -f   # Follow APISIX logs"
         echo "  $0 routes           # List all routes"
         ;;
