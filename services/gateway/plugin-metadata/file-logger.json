@@ -1,0 +1,33 @@
+{
+  "id": "file-logger",
+  "log_format": {
+    "event_version": "v2",
+    "event_type": "llm.request.completed.v1",
+    "ts": "$time_iso8601",
+    "gateway_env": "$ENVIRONMENT",
+
+    "gw_request_id": "$request_id",
+    "x_request_id": "$sent_http_x_request_id",
+    "user_request_id": "$http_x_user_request_id",
+
+    "_dbg_http_x_request_id": "$http_x_request_id",
+    "_dbg_upstream_x_request_id": "$upstream_http_x_request_id",
+
+    "provider": "$billing_provider",
+    "endpoint": "$billing_endpoint",
+    "is_streaming": "$billing_is_streaming",
+
+    "consumer": "$consumer_name",
+    "consumer_group_id": "$consumer_group_id",
+    "route_name": "$route_name",
+
+    "model": "$billing_model",
+    "provider_request_id": "$upstream_http_request_id",
+    "provider_response_id": "$billing_provider_response_id",
+    "usage": "$billing_usage_json",
+    "usage_present": "$billing_usage_present",
+
+    "status": "$status",
+    "upstream_latency": "$upstream_response_time"
+  }
+}

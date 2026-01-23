@@ -41,6 +41,11 @@
       "provider": "anthropic",
       "endpoint": "messages"
     },
+    "response-wiretap": {
+      "enabled": true,
+      "max_body_bytes": 524288,
+      "log_path": "/usr/local/apisix/logs/wiretap.jsonl"
+    },
     "kafka-logger": {
       "brokers": [{"host": "kafka", "port": 9092}],
       "kafka_topic": "$KAFKA_TOPIC",

@@ -49,3 +49,4 @@ plugins:
   - request-id
   - kafka-logger
   - billing-extractor
+  - response-wiretap
