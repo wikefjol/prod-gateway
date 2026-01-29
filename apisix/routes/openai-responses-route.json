@@ -1,7 +1,7 @@
 {
-  "id": "openai-chat-completions",
-  "name": "openai-chat-completions",
-  "uri": "/v1/chat/completions",
+  "id": "openai-responses",
+  "name": "openai-responses",
+  "uri": "/v1/responses",
   "methods": ["POST"],
   "plugins": {
     "serverless-pre-function": {
@@ -38,7 +38,7 @@
     },
     "billing-extractor": {
       "provider": "openai",
-      "endpoint": "chat_completions"
+      "endpoint": "responses"
     },
     "response-wiretap": {
       "enabled": true,

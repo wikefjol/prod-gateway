@@ -9,7 +9,7 @@
         "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') return auth.bearer_to_api_key(conf, ctx) end"
       ]
     },
-    "key-auth": {
+    "openai-auth": {
       "header": "x-api-key",
       "hide_credentials": true
     },

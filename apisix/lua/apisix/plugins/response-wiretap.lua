@@ -4,6 +4,17 @@ local ngx_encode_base64 = ngx.encode_base64
 
 local plugin_name = "response-wiretap"
 
+local function pick_headers(ctx, names)
+    local out = {}
+    for _, name in ipairs(names) do
+        local v = core.request.header(ctx, name)
+        if v ~= nil then
+            out[string.lower(name)] = v
+        end
+    end
+    return out
+end
+
 local schema = {
     type = "object",
     properties = {
@@ -44,6 +55,20 @@ function _M.access(conf, ctx)
     end
 
     ctx._wiretap_enabled = true
+    ctx._wiretap_headers = pick_headers(ctx, {
+        "X-Debug-Capture",
+        "X-Test-Run-Id",
+        "X-Test-Suite",
+        "X-Test-Function",
+        "X-Test-Name",
+        "X-Test-Category",
+        "X-Test-Case-Id",
+        "X-Test-Timestamp",
+        "X-Test-Call",
+        "X-Request-Id",
+        "Host",
+        "User-Agent",
+    })
     ctx._wiretap_chunks = {}
     ctx._wiretap_sse_frames = {}
     ctx._wiretap_sse_buf = ""
@@ -152,6 +177,7 @@ function _M.log(conf, ctx)
         is_streaming = ctx._wiretap_is_streaming,
         status = ngx.status,
         content_encoding = ngx.header["Content-Encoding"] or "identity",
+        headers = ctx._wiretap_headers,
         raw_chunks = ctx._wiretap_chunks,
         total_bytes = ctx._wiretap_total_bytes,
         truncated = ctx._wiretap_truncated,

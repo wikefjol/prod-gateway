@@ -71,25 +71,13 @@ function _M.access(conf, ctx)
     if req.stream == true then
         ctx.billing_is_streaming = "true"
 
-        -- Enforce include_usage for OpenAI streaming requests
+        -- Check include_usage for OpenAI streaming requests (no longer enforced)
         if conf.provider == "openai" then
             local include_usage = req.stream_options
                 and req.stream_options.include_usage == true
             if not include_usage then
-                -- Set billing context for Kafka event BEFORE exiting
                 ctx.billing_usage_present = "false"
-                ctx.billing_usage_json = ""
-
-                local err_body = {
-                    error = {
-                        message = "OpenAI streaming requests must include stream_options.include_usage=true for billing. "
-                            .. "Add '\"stream_options\": {\"include_usage\": true}' to your request body.",
-                        type = "invalid_request_error",
-                        param = "stream_options.include_usage",
-                        code = "missing_required_parameter"
-                    }
-                }
-                return core.response.exit(400, err_body, {["Content-Type"] = "application/json"})
+                core.log.warn("OpenAI streaming without include_usage - billing data unavailable")
             end
         end
     else

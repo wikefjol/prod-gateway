@@ -14,6 +14,8 @@ volumes:
     driver: local
   kafka_data:
     driver: local
+  open-webui:
+    driver: local
 
 services:
   # etcd - Configuration store for APISIX
