@@ -1,0 +1,25 @@
+{
+  "id": "openwebui-route",
+  "uris": ["/webui/", "/webui/*"],
+  "methods": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+  "plugins": {
+    "openid-connect": {
+      "client_id": "$OIDC_CLIENT_ID",
+      "client_secret": "$OIDC_CLIENT_SECRET",
+      "discovery": "$OIDC_DISCOVERY_ENDPOINT",
+      "scope": "openid profile email",
+      "redirect_uri": "$OIDC_REDIRECT_URI",
+      "bearer_only": false,
+      "ssl_verify": false,
+      "session": { "secret": "$OIDC_SESSION_SECRET" },
+      "set_userinfo_header": true
+    },
+    "proxy-rewrite": {
+      "regex_uri": ["^/webui(/.*)?$", "$1"]
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "nodes": { "openwebui:8080": 1 }
+  }
+}

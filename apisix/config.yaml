@@ -41,6 +41,7 @@ plugins:
   - limit-count
   - cors
   - key-auth
+  - openai-auth
   - openid-connect
   - consumer-restriction
   - redirect

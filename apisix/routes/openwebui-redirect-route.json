@@ -1,0 +1,8 @@
+{
+  "id": "openwebui-redirect-route",
+  "uri": "/webui",
+  "methods": ["GET", "HEAD"],
+  "plugins": {
+    "redirect": { "uri": "/webui/", "ret_code": 302 }
+  }
+}

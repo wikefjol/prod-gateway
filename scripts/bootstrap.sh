@@ -69,6 +69,8 @@ CORE_ROUTES=(
   "portal-redirect-route.json"
   "oidc-generic-route.json"
   "root-redirect-route.json"
+  #"openwebui-redirect-route.json"
+  #"openwebui-route.json"
 )
 
 # Provider routes (optional; gated by API keys)
@@ -80,6 +82,8 @@ PROVIDER_ROUTES=(
   "anthropic-count-tokens.json"
   "openai-chat-completions-route.json"
   "openai-models-route.json"
+  "openai-responses-route.json"
+  "litellm-passthrough-route.json"
 )
 
 # -------------------------

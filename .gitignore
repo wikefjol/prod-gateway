@@ -50,3 +50,4 @@ gateway-usage-examples.txt
 
 # Reference implementation (separate repo)
 llm_gateway_reference/
+_prototypes/
