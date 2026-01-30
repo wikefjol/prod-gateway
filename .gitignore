@@ -1,53 +1,40 @@
-# Environment files with sensitive keys (moved to old/)
-# .env, admin.env, .dev.env, .test.env moved to old/
-bin/
-
-# Secrets directory (contains sensitive credentials)
+# Environment files with secrets
+infra/env/.env.*
 secrets/
+.secrets/
 
-# Generated complete environment files (contain resolved secrets)
-config/env/*.complete.env
-# APISIX source repository (external dependency)
-apisix-source-repo/
-
-# Docker volumes and logs
+# Logs
 logs/
-
-# Temporary files
-*.tmp
 *.log
 
-# IDE/Editor files
+# Temp
+*.tmp
+bin/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-2025-12-03_state.md
-.secrets/
-
-.env.dev
-.env.test
-old 
-
-# Claude Code plans (user-specific)
+# Claude Code
 .claude/
-
-.env.example
 CLAUDE.md
-notes_on_logs.md
-old/config-dev-static.yaml
-old/config-dev-template.yaml
-old/config-test-static.yaml
-old/config-test-template.yamlgateway-usage-examples.txt
+
+# External repos
+apisix-source-repo/
+llm_gateway_reference/
+_prototypes/
+
+# Test artifacts
 sdk_test_results/
 tmp_key_file.txt
 gateway-usage-examples.txt
+notes_on_logs.md
 
-# Reference implementation (separate repo)
-llm_gateway_reference/
-_prototypes/
+# Old structure (to be cleaned)
+old/

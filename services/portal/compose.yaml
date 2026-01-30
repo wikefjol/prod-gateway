@@ -1,0 +1,25 @@
+services:
+  portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${PORTAL_PORT:-3001}:3000"
+    networks:
+      - core
+    environment:
+      ADMIN_KEY: ${ADMIN_KEY}
+      APISIX_ADMIN_API: "http://apisix:9180/apisix/admin"
+      ENVIRONMENT: ${ENVIRONMENT}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  core:
+    name: ${CORE_NET}
+    external: true
