@@ -40,3 +40,6 @@ notes_on_logs.md
 old/
 .bin/
 .bin
+
+utils/
+usage_guide.txt
