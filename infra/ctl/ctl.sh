@@ -46,8 +46,8 @@ log_success() { echo "✅ $*"; }
 log_error()   { echo "❌ $*" >&2; }
 log_warning() { echo "⚠️  $*"; }
 
-# Core services in dependency order
-CORE_SERVICES=(etcd apisix portal)
+# Core services (etcd is implicit via apisix compose)
+CORE_SERVICES=(apisix portal)
 
 # Ensure network exists
 ensure_network() {
@@ -61,7 +61,7 @@ ensure_network() {
 compose_cmd() {
   local svc="$1"
   shift
-  docker compose --project-name "apisix-$ENV-$svc" \
+  docker compose --project-name "gw-$ENV-$svc" \
     --env-file "$ENV_FILE" \
     -f "$SERVICES_DIR/$svc/compose.yaml" \
     "$@"
@@ -123,9 +123,21 @@ cmd_up() {
     exit 1
   fi
 
+  if is_running "$svc"; then
+    log_info "$svc already running"
+    return
+  fi
+
   log_info "Starting $svc..."
   compose_cmd "$svc" up -d --pull always --force-recreate --remove-orphans
   log_success "$svc started"
+
+  # Bootstrap routes after apisix starts
+  if [ "$svc" == "apisix" ]; then
+    if wait_for_apisix; then
+      cmd_bootstrap
+    fi
+  fi
 }
 
 cmd_down() {
@@ -280,7 +292,7 @@ Commands:
   bootstrap                 Load routes into APISIX
   build <service> [--cache] Build service
 
-Core services: etcd apisix portal
+Core services: apisix portal (etcd bundled with apisix)
 
 Examples:
   ./infra/ctl/ctl.sh up                    # Start all dev services

@@ -16,26 +16,12 @@ ROUTES_DIR="$SERVICE_DIR/routes"
 CONSUMER_GROUPS_DIR="$SERVICE_DIR/consumer-groups"
 PLUGIN_METADATA_DIR="$SERVICE_DIR/plugin-metadata"
 
-# Environment-specific admin API endpoints (host-side)
-if [ "$ENVIRONMENT" = "test" ]; then
-  ADMIN_API="http://127.0.0.1:${APISIX_ADMIN_PORT:-9181}/apisix/admin"
-else
-  ADMIN_API="http://127.0.0.1:${APISIX_ADMIN_PORT:-9180}/apisix/admin"
-fi
-
 # -------------------------
 # Logging helpers
 # -------------------------
 log_info()    { echo "ℹ️  $*"; }
 log_success() { echo "✅ $*"; }
 log_error()   { echo "❌ $*" >&2; }
-
-# -------------------------
-# Dependency checks
-# -------------------------
-require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || { log_error "Missing dependency: $1"; exit 1; }
-}
 
 # -------------------------
 # Load environment variables
@@ -52,6 +38,15 @@ else
 fi
 
 : "${ADMIN_KEY:?ADMIN_KEY missing in $ENV_FILE}"
+: "${APISIX_ADMIN_PORT:?APISIX_ADMIN_PORT missing in $ENV_FILE}"
+ADMIN_API="http://127.0.0.1:${APISIX_ADMIN_PORT}/apisix/admin"
+
+# -------------------------
+# Dependency checks
+# -------------------------
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || { log_error "Missing dependency: $1"; exit 1; }
+}
 
 # -------------------------
 # Resources to bootstrap
