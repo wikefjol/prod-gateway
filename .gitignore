@@ -38,3 +38,5 @@ notes_on_logs.md
 
 # Old structure (to be cleaned)
 old/
+.bin/
+.bin
