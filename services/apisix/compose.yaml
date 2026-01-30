@@ -1,8 +1,29 @@
 services:
+  etcd:
+    image: bitnamilegacy/etcd:3.5.11
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://etcd:2379"
+    volumes:
+      - apisix_etcd_data:/bitnami/etcd
+    networks:
+      - core
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   apisix:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      etcd:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${APISIX_GATEWAY_PORT:-9080}:9080"
       - "127.0.0.1:${APISIX_ADMIN_PORT:-9180}:9180"
@@ -32,4 +53,5 @@ networks:
     external: true
 
 volumes:
+  apisix_etcd_data: {}
   apisix_logs: {}
