@@ -9,7 +9,7 @@ services:
       - core
     environment:
       ADMIN_KEY: ${ADMIN_KEY}
-      APISIX_ADMIN_API: "http://apisix:9180/apisix/admin"
+      APISIX_ADMIN_API_CONTAINER: "http://apisix:9180/apisix/admin"
       ENVIRONMENT: ${ENVIRONMENT}
     restart: unless-stopped
     healthcheck:
