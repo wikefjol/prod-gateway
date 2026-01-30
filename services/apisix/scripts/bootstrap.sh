@@ -1,7 +1,6 @@
 #!/bin/bash
-# APISIX Bootstrap - Single-File, Scalable
-# Loads required consumer groups + essential routes into APISIX
-# Usage: ./scripts/bootstrap.sh [dev|test]
+# APISIX Bootstrap - Loads consumer groups + routes into APISIX
+# Usage: ./services/apisix/scripts/bootstrap.sh [dev|test]
 
 set -euo pipefail
 
@@ -10,17 +9,18 @@ set -euo pipefail
 # -------------------------
 ENVIRONMENT="${1:-dev}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SERVICE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SERVICE_DIR/../.." && pwd)"
 
-ROUTES_DIR="$PROJECT_ROOT/apisix/routes"
-CONSUMER_GROUPS_DIR="$PROJECT_ROOT/apisix/consumer-groups"
-PLUGIN_METADATA_DIR="$PROJECT_ROOT/apisix/plugin-metadata"
+ROUTES_DIR="$SERVICE_DIR/routes"
+CONSUMER_GROUPS_DIR="$SERVICE_DIR/consumer-groups"
+PLUGIN_METADATA_DIR="$SERVICE_DIR/plugin-metadata"
 
 # Environment-specific admin API endpoints (host-side)
 if [ "$ENVIRONMENT" = "test" ]; then
-  ADMIN_API="http://127.0.0.1:9181/apisix/admin"
+  ADMIN_API="http://127.0.0.1:${APISIX_ADMIN_PORT:-9181}/apisix/admin"
 else
-  ADMIN_API="http://127.0.0.1:9180/apisix/admin"
+  ADMIN_API="http://127.0.0.1:${APISIX_ADMIN_PORT:-9180}/apisix/admin"
 fi
 
 # -------------------------
@@ -38,9 +38,9 @@ require_cmd() {
 }
 
 # -------------------------
-# Load environment variables from secrets
+# Load environment variables
 # -------------------------
-ENV_FILE="$PROJECT_ROOT/.env.$ENVIRONMENT"
+ENV_FILE="$PROJECT_ROOT/infra/env/.env.$ENVIRONMENT"
 if [ -f "$ENV_FILE" ]; then
   set -a
   # shellcheck disable=SC1090
@@ -69,8 +69,6 @@ CORE_ROUTES=(
   "portal-redirect-route.json"
   "oidc-generic-route.json"
   "root-redirect-route.json"
-  #"openwebui-redirect-route.json"
-  #"openwebui-route.json"
 )
 
 # Provider routes (optional; gated by API keys)
@@ -105,10 +103,9 @@ wait_for_apisix() {
 # -------------------------
 # Generic APISIX apply helper
 # -------------------------
-# usage: apisix_apply_json <kind> <endpoint> <file_path> <require_id:true|false> <allow_post:true|false>
 apisix_apply_json() {
-  local kind="$1"         # "route" / "consumer-group" / etc
-  local endpoint="$2"     # "routes" / "consumer_groups"
+  local kind="$1"
+  local endpoint="$2"
   local file_path="$3"
   local require_id="${4:-true}"
   local allow_post="${5:-false}"
@@ -165,14 +162,12 @@ apisix_apply_json() {
 load_consumer_group() {
   local group_file="$1"
   local group_path="$CONSUMER_GROUPS_DIR/$group_file"
-  # Consumer groups MUST have .id and should be PUT by ID
   apisix_apply_json "consumer-group" "consumer_groups" "$group_path" "true" "false"
 }
 
 load_route() {
   local route_file="$1"
   local route_path="$ROUTES_DIR/$route_file"
-  # Routes may be POSTed if no .id, or PUT if .id exists
   apisix_apply_json "route" "routes" "$route_path" "false" "true"
 }
 
@@ -187,7 +182,6 @@ load_plugin_metadata() {
 
   local plugin_name payload response http_code body
   plugin_name="$(jq -r '.id // empty' "$metadata_path" 2>/dev/null || true)"
-  # Only substitute specific env vars, preserving APISIX variables like $time_iso8601, $status, etc.
   payload="$(envsubst '${ENVIRONMENT}' < "$metadata_path")"
 
   if [ -z "$plugin_name" ]; then
@@ -218,7 +212,6 @@ load_plugin_metadata() {
 # Bootstrap steps
 # -------------------------
 
-# Plugin metadata files to load
 PLUGIN_METADATA_FILES=(
   "kafka-logger.json"
 )
@@ -287,7 +280,6 @@ bootstrap_core_routes() {
 }
 
 bootstrap_provider_routes_if_configured() {
-  # Only attempt provider routes if API keys are available
   if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${LITELLM_KEY:-}" ]; then
     log_info "Loading provider routes (API keys detected)..."
     local ok=0 fail=0
@@ -302,7 +294,6 @@ bootstrap_provider_routes_if_configured() {
 
     log_info "Loaded $ok/${#PROVIDER_ROUTES[@]} provider routes"
 
-    # Provider routes are optional; don't hard-fail by default
     if [ "$fail" -ne 0 ]; then
       log_error "Some provider routes failed to load ($fail failures). Continuing."
     fi
@@ -317,8 +308,6 @@ bootstrap_provider_routes_if_configured() {
 main() {
   log_info "Bootstrapping APISIX for $ENVIRONMENT environment..."
 
-  cd "$PROJECT_ROOT"
-
   require_cmd curl
   require_cmd jq
   require_cmd envsubst
@@ -327,22 +316,18 @@ main() {
     exit 1
   fi
 
-  # Required: consumer groups first (portal depends on base_user/premium_user)
   if ! bootstrap_consumer_groups; then
     exit 1
   fi
 
-  # Plugin metadata (kafka-logger log_format, etc.) - before routes
   if ! bootstrap_plugin_metadata; then
     exit 1
   fi
 
-  # Required: core routes
   if ! bootstrap_core_routes; then
     exit 1
   fi
 
-  # Optional: provider routes
   bootstrap_provider_routes_if_configured
 
   log_success "Bootstrap completed for $ENVIRONMENT environment"
