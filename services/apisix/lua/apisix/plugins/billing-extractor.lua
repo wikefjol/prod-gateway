@@ -3,7 +3,7 @@ local cjson = require("cjson.safe")
 
 local plugin_name = "billing-extractor"
 
--- Register custom APISIX variables for kafka-logger log_format
+-- Register custom APISIX variables for file-logger log_format
 core.ctx.register_var("billing_model", function(ctx)
     return ctx.billing_model or ""
 end)

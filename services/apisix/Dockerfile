@@ -24,5 +24,5 @@ RUN chmod +x /docker-entrypoint-custom.sh && \
     chown apisix:apisix /docker-entrypoint-custom.sh && \
     chown -R apisix:apisix /usr/local/apisix/lua
 
-USER apisix
+USER root
 ENTRYPOINT ["/docker-entrypoint-custom.sh"]

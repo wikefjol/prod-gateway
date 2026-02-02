@@ -38,12 +38,12 @@
         "return function(conf, ctx) local gw_id = ngx.req.get_headers()['X-Request-Id'] if gw_id then ngx.header['X-Request-Id'] = gw_id end end"
       ]
     },
-    "kafka-logger": {
-      "brokers": [{"host": "kafka", "port": 9092}],
-      "kafka_topic": "$KAFKA_TOPIC",
-      "batch_max_size": 1,
-      "include_req_body": false,
-      "include_resp_body": false
+    "file-logger": {
+      "path": "/var/log/apisix/billing/litellm.log"
+    },
+    "response-wiretap": {
+      "always_capture": true,
+      "log_path": "/var/log/apisix/wiretap/litellm.jsonl"
     }
   },
   "upstream": {

@@ -7,7 +7,7 @@ apisix:
 
 nginx_config:
   http_configuration_snippet: |
-    # Prometheus shared dicts for kafka-logger dependency
+    # Prometheus shared dicts
     lua_shared_dict prometheus-metrics 300m;
     lua_shared_dict prometheus-cache 30m;
 
@@ -48,6 +48,6 @@ plugins:
   - serverless-pre-function
   - serverless-post-function
   - request-id
-  - kafka-logger
+  - file-logger
   - billing-extractor
   - response-wiretap
