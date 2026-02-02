@@ -1,13 +1,11 @@
 {
-  "id": "openai-responses",
-  "name": "openai-responses",
-  "uri": "/v1/responses",
-  "methods": ["POST"],
+  "id": "provider-anthropic-openai",
+  "name": "provider-anthropic-openai",
+  "uri": "/provider/anthropic/openai/v1/*",
+  "methods": ["GET", "POST"],
   "plugins": {
     "serverless-pre-function": {
-      "_meta": {
-        "priority": 12020
-      },
+      "_meta": { "priority": 12020 },
       "phase": "rewrite",
       "functions": [
         "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') auth.sanitize_request_ids(conf, ctx) return auth.bearer_to_api_key(conf, ctx) end"
@@ -18,17 +16,11 @@
       "hide_credentials": true
     },
     "proxy-rewrite": {
+      "regex_uri": ["^/provider/anthropic/openai/v1/(.*)", "/v1/$1"],
       "headers": {
-        "remove": [
-          "Origin",
-          "Referer",
-          "Cookie",
-          "Sec-Fetch-Site",
-          "Sec-Fetch-Mode",
-          "Sec-Fetch-Dest"
-        ],
+        "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
-          "Authorization": "Bearer $OPENAI_API_KEY"
+          "Authorization": "Bearer $ANTHROPIC_API_KEY"
         }
       }
     },
@@ -38,12 +30,7 @@
     },
     "billing-extractor": {
       "provider": "openai",
-      "endpoint": "responses"
-    },
-    "response-wiretap": {
-      "enabled": true,
-      "max_body_bytes": 524288,
-      "log_path": "/usr/local/apisix/logs/wiretap.jsonl"
+      "endpoint": "chat_completions"
     },
     "serverless-post-function": {
       "phase": "header_filter",
@@ -63,7 +50,7 @@
     "type": "roundrobin",
     "scheme": "https",
     "nodes": {
-      "api.openai.com:443": 1
+      "api.anthropic.com:443": 1
     },
     "pass_host": "node"
   }

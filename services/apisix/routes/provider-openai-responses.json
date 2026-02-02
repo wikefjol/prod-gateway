@@ -1,35 +1,26 @@
 {
-  "id": "anthropic-messages",
-  "name": "anthropic-messages",
-  "uri": "/v1/messages",
+  "id": "provider-openai-responses",
+  "name": "provider-openai-responses",
+  "uri": "/provider/openai/v1/responses",
   "methods": ["POST"],
   "plugins": {
     "serverless-pre-function": {
-      "_meta": {
-        "priority": 12020
-      },
+      "_meta": { "priority": 12020 },
       "phase": "rewrite",
       "functions": [
         "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') auth.sanitize_request_ids(conf, ctx) return auth.bearer_to_api_key(conf, ctx) end"
       ]
     },
-    "key-auth": {
+    "openai-auth": {
       "header": "x-api-key",
       "hide_credentials": true
     },
     "proxy-rewrite": {
+      "uri": "/v1/responses",
       "headers": {
-        "remove": [
-          "Origin",
-          "Referer",
-          "Cookie",
-          "Sec-Fetch-Site",
-          "Sec-Fetch-Mode",
-          "Sec-Fetch-Dest"
-        ],
+        "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
-          "x-api-key": "$ANTHROPIC_API_KEY",
-          "anthropic-version": "2023-06-01"
+          "Authorization": "Bearer $OPENAI_API_KEY"
         }
       }
     },
@@ -38,13 +29,14 @@
       "include_in_response": true
     },
     "billing-extractor": {
-      "provider": "anthropic",
-      "endpoint": "messages"
+      "provider": "openai",
+      "endpoint": "responses"
     },
-    "response-wiretap": {
-      "enabled": true,
-      "max_body_bytes": 524288,
-      "log_path": "/usr/local/apisix/logs/wiretap.jsonl"
+    "serverless-post-function": {
+      "phase": "header_filter",
+      "functions": [
+        "return function(conf, ctx) local gw_id = ngx.req.get_headers()['X-Request-Id'] if gw_id then ngx.header['X-Request-Id'] = gw_id end end"
+      ]
     },
     "kafka-logger": {
       "brokers": [{"host": "kafka", "port": 9092}],
@@ -58,7 +50,7 @@
     "type": "roundrobin",
     "scheme": "https",
     "nodes": {
-      "api.anthropic.com:443": 1
+      "api.openai.com:443": 1
     },
     "pass_host": "node"
   }
