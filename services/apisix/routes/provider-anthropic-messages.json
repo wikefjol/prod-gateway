@@ -1,7 +1,8 @@
 {
-  "id": "litellm-passthrough",
-  "uri": "/litellm/*",
-  "methods": ["GET", "POST", "PUT", "DELETE"],
+  "id": "provider-anthropic-messages",
+  "name": "provider-anthropic-messages",
+  "uri": "/provider/anthropic/v1/messages",
+  "methods": ["POST"],
   "plugins": {
     "serverless-pre-function": {
       "_meta": { "priority": 12020 },
@@ -10,16 +11,17 @@
         "return function(conf, ctx) local auth = require('apisix.plugins.auth-transform') auth.sanitize_request_ids(conf, ctx) return auth.bearer_to_api_key(conf, ctx) end"
       ]
     },
-    "openai-auth": {
+    "key-auth": {
       "header": "x-api-key",
       "hide_credentials": true
     },
     "proxy-rewrite": {
-      "regex_uri": ["^/litellm/(.*)", "/$1"],
+      "uri": "/v1/messages",
       "headers": {
         "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
-          "Authorization": "Bearer $LITELLM_KEY"
+          "x-api-key": "$ANTHROPIC_API_KEY",
+          "anthropic-version": "2023-06-01"
         }
       }
     },
@@ -28,14 +30,8 @@
       "include_in_response": true
     },
     "billing-extractor": {
-      "provider": "openai",
-      "endpoint": "passthrough"
-    },
-    "serverless-post-function": {
-      "phase": "header_filter",
-      "functions": [
-        "return function(conf, ctx) local gw_id = ngx.req.get_headers()['X-Request-Id'] if gw_id then ngx.header['X-Request-Id'] = gw_id end end"
-      ]
+      "provider": "anthropic",
+      "endpoint": "messages"
     },
     "kafka-logger": {
       "brokers": [{"host": "kafka", "port": 9092}],
@@ -49,7 +45,7 @@
     "type": "roundrobin",
     "scheme": "https",
     "nodes": {
-      "anast.ita.chalmers.se:4000": 1
+      "api.anthropic.com:443": 1
     },
     "pass_host": "node"
   }

@@ -68,15 +68,18 @@ CORE_ROUTES=(
 
 # Provider routes (optional; gated by API keys)
 PROVIDER_ROUTES=(
-  "anthropic-route.json"
-  "openai-route.json"
-  "litellm-route.json"
-  "anthropic-messages.json"
-  "anthropic-count-tokens.json"
-  "openai-chat-completions-route.json"
-  "openai-models-route.json"
-  "openai-responses-route.json"
-  "litellm-passthrough-route.json"
+  # Provider-native routes
+  "provider-anthropic-messages.json"
+  "provider-anthropic-count-tokens.json"
+  "provider-anthropic-models.json"
+  "provider-anthropic-openai.json"
+  "provider-openai-chat.json"
+  "provider-openai-models.json"
+  "provider-openai-responses.json"
+  "provider-litellm.json"
+  # OpenWebUI routes
+  "openwebui-central.json"
+  "openwebui-direct.json"
 )
 
 # -------------------------
