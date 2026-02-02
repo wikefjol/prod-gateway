@@ -128,6 +128,14 @@ cmd_up() {
     return
   fi
 
+  # Ensure log directories exist with correct permissions for APISIX (uid 636)
+  if [ "$svc" == "apisix" ]; then
+    mkdir -p "$SERVICES_DIR/apisix/logs/billing" 2>/dev/null || true
+    mkdir -p "$SERVICES_DIR/apisix/logs/wiretap" 2>/dev/null || true
+    chmod 777 "$SERVICES_DIR/apisix/logs/billing" 2>/dev/null || true
+    chmod 777 "$SERVICES_DIR/apisix/logs/wiretap" 2>/dev/null || true
+  fi
+
   log_info "Starting $svc..."
   compose_cmd "$svc" up -d --pull always --force-recreate --remove-orphans
   log_success "$svc started"

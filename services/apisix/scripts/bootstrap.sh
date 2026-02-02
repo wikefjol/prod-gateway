@@ -211,7 +211,7 @@ load_plugin_metadata() {
 # -------------------------
 
 PLUGIN_METADATA_FILES=(
-  "kafka-logger.json"
+  "file-logger.json"
 )
 
 bootstrap_plugin_metadata() {

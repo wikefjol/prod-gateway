@@ -1,5 +1,5 @@
 {
-  "id": "kafka-logger",
+  "id": "file-logger",
   "log_format": {
     "event_version": "v2",
     "event_type": "llm.request.completed.v1",

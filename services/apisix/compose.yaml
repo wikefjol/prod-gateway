@@ -39,6 +39,8 @@ services:
       CUSTOM_PROFILE: ${ENVIRONMENT}
     volumes:
       - apisix_logs:/usr/local/apisix/logs
+      - ./logs/billing:/var/log/apisix/billing
+      - ./logs/wiretap:/var/log/apisix/wiretap
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "sh", "-c", "test -f /usr/local/apisix/logs/nginx.pid && kill -0 $(cat /usr/local/apisix/logs/nginx.pid) 2>/dev/null"]
