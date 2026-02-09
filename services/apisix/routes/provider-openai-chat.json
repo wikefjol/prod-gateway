@@ -20,7 +20,8 @@
       "headers": {
         "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
-          "Authorization": "Bearer $OPENAI_API_KEY"
+          "Authorization": "Bearer $OPENAI_API_KEY",
+          "Accept-Encoding": "identity"
         }
       }
     },
@@ -31,6 +32,9 @@
     "billing-extractor": {
       "provider": "openai",
       "endpoint": "chat_completions"
+    },
+    "stream-usage-injector": {
+      "provider": "openai"
     },
     "serverless-post-function": {
       "phase": "header_filter",

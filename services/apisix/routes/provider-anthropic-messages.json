@@ -21,7 +21,8 @@
         "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
           "x-api-key": "$ANTHROPIC_API_KEY",
-          "anthropic-version": "2023-06-01"
+          "anthropic-version": "2023-06-01",
+          "Accept-Encoding": "identity"
         }
       }
     },

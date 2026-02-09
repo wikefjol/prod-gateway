@@ -50,4 +50,5 @@ plugins:
   - request-id
   - file-logger
   - billing-extractor
+  - stream-usage-injector
   - response-wiretap

@@ -32,6 +32,27 @@ core.ctx.register_var("billing_usage_present", function(ctx)
     return ctx.billing_usage_present or "false"
 end)
 
+-- New extraction outcome variables
+core.ctx.register_var("billing_usage_expected", function(ctx)
+    return ctx.billing_usage_expected or "false"
+end)
+
+core.ctx.register_var("billing_extract_status", function(ctx)
+    return ctx.billing_extract_status or ""
+end)
+
+core.ctx.register_var("billing_extract_reason", function(ctx)
+    return ctx.billing_extract_reason or ""
+end)
+
+core.ctx.register_var("billing_parse_attempted", function(ctx)
+    return ctx.billing_parse_attempted or "false"
+end)
+
+core.ctx.register_var("billing_truncated", function(ctx)
+    return ctx.billing_truncated or "false"
+end)
+
 local schema = {
     type = "object",
     properties = {
@@ -41,9 +62,25 @@ local schema = {
     },
 }
 
+-- Determine if usage is expected for this request
+-- Heuristic: POST with model AND (messages OR input OR prompt)
+local function is_usage_expected(req, method)
+    if method ~= "POST" then
+        return false
+    end
+    if not req or not req.model then
+        return false
+    end
+    -- Has model + generation payload = usage expected
+    if req.messages or req.input or req.prompt then
+        return true
+    end
+    return false
+end
+
 local _M = {
     version = 0.2,
-    priority = 1000,
+    priority = 1100,  -- Higher priority: extract billing before stream-usage-injector strips it
     name = plugin_name,
     schema = schema,
 }
@@ -56,12 +93,14 @@ function _M.access(conf, ctx)
     local body, err = core.request.get_body()
     if not body then
         ctx.billing_is_streaming = "false"
+        ctx.billing_usage_expected = "false"
         return
     end
 
     local req = cjson.decode(body)
     if not req then
         ctx.billing_is_streaming = "false"
+        ctx.billing_usage_expected = "false"
         return
     end
 
@@ -70,19 +109,12 @@ function _M.access(conf, ctx)
     -- Detect streaming request
     if req.stream == true then
         ctx.billing_is_streaming = "true"
-
-        -- Check include_usage for OpenAI streaming requests (no longer enforced)
-        if conf.provider == "openai" then
-            local include_usage = req.stream_options
-                and req.stream_options.include_usage == true
-            if not include_usage then
-                ctx.billing_usage_present = "false"
-                core.log.warn("OpenAI streaming without include_usage - billing data unavailable")
-            end
-        end
     else
         ctx.billing_is_streaming = "false"
     end
+
+    -- Determine if usage is expected
+    ctx.billing_usage_expected = is_usage_expected(req, ngx.req.get_method()) and "true" or "false"
 end
 
 -- Process a single SSE data line and extract billing info
@@ -103,6 +135,8 @@ local function process_sse_line(line, ctx)
 
     local data = cjson.decode(json_str)
     if not data then
+        ctx._billing_had_parse_error = true
+        ctx._billing_parse_error_reason = "json_decode_failed"
         return
     end
 
@@ -114,53 +148,147 @@ local function process_sse_line(line, ctx)
     if data.message and data.message.id and data.message.id ~= "" then
         ctx.billing_provider_response_id = data.message.id
     end
+    -- Also check nested: data.response.id (OpenAI Responses API)
+    if data.response and data.response.id and data.response.id ~= "" then
+        ctx.billing_provider_response_id = data.response.id
+    end
 
     -- Extract usage (last one wins - overwrite)
     if data.usage then
         ctx.billing_usage_json = cjson.encode(data.usage)
         ctx._billing_usage_found = true
     end
+    -- Also check nested: data.response.usage (OpenAI Responses API)
+    if data.response and data.response.usage then
+        ctx.billing_usage_json = cjson.encode(data.response.usage)
+        ctx._billing_usage_found = true
+    end
 end
 
--- Process streaming response with SSE parsing
+-- Finalize streaming extraction status
+local function finalize_streaming_status(ctx)
+    if ctx.billing_usage_expected ~= "true" then
+        ctx.billing_extract_status = "not_applicable"
+        ctx.billing_extract_reason = "aux_request"
+    elseif ctx._billing_usage_found then
+        ctx.billing_extract_status = "captured"
+        ctx.billing_extract_reason = ""
+        ctx.billing_usage_present = "true"
+    elseif ctx._billing_truncated then
+        ctx.billing_extract_status = "truncated"
+        ctx.billing_extract_reason = ctx._billing_truncate_reason or "sse_buf_limit"
+    elseif ctx._billing_had_parse_error then
+        ctx.billing_extract_status = "parse_error"
+        ctx.billing_extract_reason = ctx._billing_parse_error_reason or "json_decode_failed"
+    else
+        ctx.billing_extract_status = "missing_usage"
+        ctx.billing_extract_reason = "usage_field_absent"
+    end
+
+    ctx.billing_truncated = ctx._billing_truncated and "true" or "false"
+
+    if ctx.billing_extract_status ~= "captured" then
+        ctx.billing_usage_present = "false"
+        ctx.billing_usage_json = ""
+    end
+end
+
+-- Process streaming response with frame-based SSE parsing
 local function process_streaming_chunk(conf, ctx, chunk, eof)
-    -- Accumulate chunk into buffer
     ctx._sse_buf = (ctx._sse_buf or "") .. chunk
+    ctx.billing_parse_attempted = "true"
 
-    -- Find last newline position
-    local last_nl = ctx._sse_buf:match(".*()[\r\n]")
-    if last_nl then
-        -- Process complete portion (up to last newline)
-        local complete = ctx._sse_buf:sub(1, last_nl)
-        -- Keep tail (incomplete line) for next chunk
-        ctx._sse_buf = ctx._sse_buf:sub(last_nl + 1)
+    -- Process complete SSE frames (end with \n\n or \r\n\r\n)
+    while true do
+        local frame_end = ctx._sse_buf:find("\n\n", 1, true)
+        local crlf_end = ctx._sse_buf:find("\r\n\r\n", 1, true)
 
-        -- Process each line in complete portion
-        for line in complete:gmatch("[^\r\n]+") do
+        if crlf_end and (not frame_end or crlf_end < frame_end) then
+            frame_end = crlf_end + 2  -- Account for extra \r\n
+        end
+
+        if not frame_end then break end
+
+        local frame = ctx._sse_buf:sub(1, frame_end - 1)
+        ctx._sse_buf = ctx._sse_buf:sub(frame_end + 2)
+
+        -- Process data: lines within frame
+        for line in frame:gmatch("[^\r\n]+") do
             process_sse_line(line, ctx)
         end
     end
 
-    -- Safety cap on buffer (32KB)
+    -- Buffer cap check
     if #ctx._sse_buf > 32768 then
+        ctx._billing_truncated = true
+        ctx._billing_truncate_reason = "sse_buf_limit"
         ctx._sse_buf = ctx._sse_buf:sub(-32768)
     end
 
-    -- On EOF: flush remaining buffer (handles streams without trailing newline)
-    if eof and ctx._sse_buf and #ctx._sse_buf > 0 then
-        process_sse_line(ctx._sse_buf, ctx)
-        ctx._sse_buf = ""
+    -- EOF: finalize status
+    if eof then
+        finalize_streaming_status(ctx)
+    end
+end
+
+-- Finalize non-streaming extraction status
+local function finalize_nonstreaming_status(ctx, resp)
+    if ctx.billing_usage_expected ~= "true" then
+        ctx.billing_extract_status = "not_applicable"
+        ctx.billing_extract_reason = "aux_request"
+        ctx.billing_truncated = "false"
+        ctx.billing_usage_present = "false"
+        return
     end
 
-    -- Set usage_present flag on EOF
-    if eof then
-        if ctx._billing_usage_found then
-            ctx.billing_usage_present = "true"
-        else
-            ctx.billing_usage_present = "false"
-            ctx.billing_usage_json = ""
-        end
+    if ctx._billing_truncated then
+        ctx.billing_extract_status = "truncated"
+        ctx.billing_extract_reason = ctx._billing_truncate_reason or "resp_body_limit"
+        ctx.billing_truncated = "true"
+        ctx.billing_usage_present = "false"
+        ctx.billing_usage_json = ""
+        ctx.billing_provider_response_id = ""
+        return
     end
+
+    if ctx._billing_had_parse_error then
+        ctx.billing_extract_status = "parse_error"
+        ctx.billing_extract_reason = ctx._billing_parse_error_reason or "json_decode_failed"
+        ctx.billing_truncated = "false"
+        ctx.billing_usage_present = "false"
+        return
+    end
+
+    -- Extract ID
+    if resp then
+        if resp.id and resp.id ~= "" then
+            ctx.billing_provider_response_id = resp.id
+        elseif resp.response and resp.response.id then
+            ctx.billing_provider_response_id = resp.response.id
+        else
+            ctx.billing_provider_response_id = ""
+        end
+
+        -- Extract usage
+        local usage = resp.usage or (resp.response and resp.response.usage)
+        if usage then
+            ctx.billing_usage_json = cjson.encode(usage)
+            ctx.billing_usage_present = "true"
+            ctx.billing_extract_status = "captured"
+            ctx.billing_extract_reason = ""
+        else
+            ctx.billing_usage_json = ""
+            ctx.billing_usage_present = "false"
+            ctx.billing_extract_status = "missing_usage"
+            ctx.billing_extract_reason = "usage_field_absent"
+        end
+    else
+        ctx.billing_extract_status = "missing_usage"
+        ctx.billing_extract_reason = "usage_field_absent"
+        ctx.billing_usage_present = "false"
+    end
+
+    ctx.billing_truncated = "false"
 end
 
 -- Process non-streaming response by buffering full body
@@ -177,6 +305,8 @@ local function process_nonstreaming_chunk(conf, ctx, chunk, eof)
             t[#t + 1] = chunk
         else
             ctx._billing_resp_truncated = true
+            ctx._billing_truncated = true
+            ctx._billing_truncate_reason = "resp_body_limit"
         end
     end
 
@@ -184,10 +314,11 @@ local function process_nonstreaming_chunk(conf, ctx, chunk, eof)
         return
     end
 
-    if ctx._billing_resp_truncated then
-        ctx.billing_provider_response_id = ""
-        ctx.billing_usage_json = ""
-        ctx.billing_usage_present = "false"
+    ctx.billing_parse_attempted = "true"
+
+    -- Truncated: finalize early
+    if ctx._billing_truncated then
+        finalize_nonstreaming_status(ctx, nil)
         return
     end
 
@@ -198,23 +329,25 @@ local function process_nonstreaming_chunk(conf, ctx, chunk, eof)
 
     local resp = cjson.decode(raw)
     if not resp then
-        ctx.billing_usage_present = "false"
+        ctx._billing_had_parse_error = true
+        ctx._billing_parse_error_reason = "json_decode_failed"
+        finalize_nonstreaming_status(ctx, nil)
         return
     end
 
-    ctx.billing_provider_response_id = resp.id or ""
-
-    if resp.usage then
-        ctx.billing_usage_json = cjson.encode(resp.usage) or ""
-        ctx.billing_usage_present = "true"
-    else
-        ctx.billing_usage_json = ""
-        ctx.billing_usage_present = "false"
-    end
+    finalize_nonstreaming_status(ctx, resp)
 end
 
 function _M.body_filter(conf, ctx)
-    if ngx.status ~= 200 then
+    local status = ngx.status
+
+    -- Non-2xx: upstream error, skip extraction
+    if status < 200 or status >= 300 then
+        ctx.billing_extract_status = "upstream_error"
+        ctx.billing_extract_reason = "non_2xx_status"
+        ctx.billing_parse_attempted = "false"
+        ctx.billing_usage_present = "false"
+        ctx.billing_truncated = "false"
         return
     end
 

@@ -32,6 +32,9 @@
       "provider": "openai",
       "endpoint": "passthrough"
     },
+    "stream-usage-injector": {
+      "provider": "openai"
+    },
     "serverless-post-function": {
       "phase": "header_filter",
       "functions": [
