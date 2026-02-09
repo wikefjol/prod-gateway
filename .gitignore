@@ -32,6 +32,7 @@ _prototypes/
 
 # Test artifacts
 sdk_test_results/
+billing-tests/
 tmp_key_file.txt
 gateway-usage-examples.txt
 notes_on_logs.md

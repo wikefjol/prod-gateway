@@ -26,6 +26,11 @@
     "provider_response_id": "$billing_provider_response_id",
     "usage": "$billing_usage_json",
     "usage_present": "$billing_usage_present",
+    "usage_expected": "$billing_usage_expected",
+    "extract_status": "$billing_extract_status",
+    "extract_reason": "$billing_extract_reason",
+    "parse_attempted": "$billing_parse_attempted",
+    "truncated": "$billing_truncated",
 
     "status": "$status",
     "upstream_latency": "$upstream_response_time"
