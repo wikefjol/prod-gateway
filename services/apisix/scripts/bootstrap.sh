@@ -83,6 +83,8 @@ PROVIDER_ROUTES=(
   # Unified AI routes (model-based routing via ai-proxy)
   "ai-chat-openai.json"
   "ai-chat-anthropic.json"
+  "ai-chat-fallback.json"
+  "ai-models.json"
 )
 
 # -------------------------

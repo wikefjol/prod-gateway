@@ -1,0 +1,15 @@
+{
+  "id": "ai-chat-fallback",
+  "name": "ai-chat-fallback",
+  "uri": "/ai/v1/chat/completions",
+  "methods": ["POST"],
+  "priority": 1,
+  "plugins": {
+    "serverless-pre-function": {
+      "phase": "access",
+      "functions": [
+        "return function() ngx.status = 400 ngx.header['Content-Type'] = 'application/json' ngx.say('{\"error\":{\"message\":\"Unknown model. Use GET /ai/v1/models to list available models.\",\"type\":\"invalid_request_error\",\"code\":\"model_not_found\"}}') ngx.exit(400) end"
+      ]
+    }
+  }
+}
