@@ -5,12 +5,6 @@ apisix:
   dns_resolver_valid: 30
   extra_lua_path: "/usr/local/apisix/lua/?.lua"
 
-nginx_config:
-  http_configuration_snippet: |
-    # Prometheus shared dicts
-    lua_shared_dict prometheus-metrics 300m;
-    lua_shared_dict prometheus-cache 30m;
-
 deployment:
   role: traditional
   admin:
@@ -52,3 +46,6 @@ plugins:
   - billing-extractor
   - stream-usage-injector
   - response-wiretap
+  - prometheus
+  - ai-proxy
+  - ai-proxy-multi
