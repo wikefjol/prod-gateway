@@ -80,6 +80,9 @@ PROVIDER_ROUTES=(
   # OpenWebUI routes
   "openwebui-central.json"
   "openwebui-direct.json"
+  # Unified AI routes (model-based routing via ai-proxy)
+  "ai-chat-openai.json"
+  "ai-chat-anthropic.json"
 )
 
 # -------------------------
