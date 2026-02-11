@@ -42,5 +42,6 @@ old/
 .bin/
 .bin
 
-utils/
+utils/*
+!utils/learning-tests/
 usage_guide.txt
