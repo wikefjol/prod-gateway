@@ -37,7 +37,7 @@
       "endpoint": "messages"
     },
     "file-logger": {
-      "path": "/var/log/apisix/billing/llm-claude-code.log"
+      "path": "/usr/local/apisix/logs/billing/llm-claude-code.log"
     },
     "response-wiretap": {
       "enabled": true,
