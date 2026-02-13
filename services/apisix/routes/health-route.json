@@ -2,16 +2,12 @@
   "id": "health-simple",
   "uri": "/health",
   "methods": ["GET", "HEAD"],
-  "upstream": {
-    "type": "roundrobin",
-    "nodes": {
-      "httpbin.org:443": 1
-    },
-    "scheme": "https"
-  },
   "plugins": {
-    "proxy-rewrite": {
-      "uri": "/status/200"
+    "serverless-pre-function": {
+      "phase": "access",
+      "functions": [
+        "return function(conf, ctx) ngx.header['Content-Type'] = 'application/json' ngx.say('{\"status\":\"healthy\"}') return ngx.exit(200) end"
+      ]
     }
   }
 }
