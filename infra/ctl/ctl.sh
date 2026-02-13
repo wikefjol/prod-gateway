@@ -51,6 +51,9 @@ set -a
 source "$ENV_FILE"
 set +a
 
+# Validate required env vars
+: "${ADMIN_KEY:?ADMIN_KEY missing - set in environment or .env.local}"
+
 ensure_network() {
   : "${CORE_NET:?CORE_NET must be set in env file}"
   if ! docker network inspect "$CORE_NET" >/dev/null 2>&1; then
