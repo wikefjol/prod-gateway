@@ -86,10 +86,13 @@ utils/
 
 `infra/env/.env.dev` / `.env.test` contain:
 - CORE_NET, ENVIRONMENT
-- ADMIN_KEY, VIEWER_KEY
+- **ADMIN_KEY** (required - must be set in environment or .env.local)
+- VIEWER_KEY (defaults to ADMIN_KEY)
 - OIDC vars
 - Provider API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, LITELLM_KEY)
 - Port overrides (APISIX_GATEWAY_PORT, APISIX_ADMIN_PORT, PORTAL_PORT)
+
+**Setup:** Export `ADMIN_KEY` before running ctl commands, or create `.env.local` with `export ADMIN_KEY=<your-key>`.
 
 ## Key Files
 
