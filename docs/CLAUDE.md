@@ -97,7 +97,7 @@ utils/
 ## Key Files
 
 - `services/apisix/lua/apisix/plugins/billing-extractor.lua` - SSE streaming parser, usage extraction
-- `services/apisix/routes/anthropic-messages.json` - Example route with full plugin chain
+- `services/apisix/routes/llm-claude-code-messages.json` - Example route with full plugin chain
 - `services/portal/src/app.py` - Portal backend (Consumer/credential management)
 - `services/apisix/scripts/bootstrap.sh` - Route/consumer-group loader
 - `infra/ctl/ctl.sh` - Unified control script
