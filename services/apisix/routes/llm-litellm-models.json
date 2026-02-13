@@ -1,0 +1,43 @@
+{
+  "id": "llm-litellm-models",
+  "name": "llm-litellm-models",
+  "uri": "/llm/litellm/v1/models",
+  "methods": ["GET", "OPTIONS"],
+  "plugins": {
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": "GET,OPTIONS",
+      "allow_headers": "Authorization,Content-Type,X-Request-Id",
+      "expose_headers": "X-Request-Id",
+      "max_age": 3600
+    },
+    "auth-transform": {
+      "mode": "bearer_to_api_key",
+      "sanitize_request_ids": true
+    },
+    "openai-auth": {
+      "header": "x-api-key",
+      "hide_credentials": true
+    },
+    "proxy-rewrite": {
+      "uri": "/v1/models",
+      "headers": {
+        "set": {
+          "Authorization": "Bearer $LITELLM_KEY"
+        }
+      }
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "scheme": "https",
+    "nodes": {
+      "$LITELLM_HOST:$LITELLM_PORT": 1
+    },
+    "pass_host": "node"
+  }
+}

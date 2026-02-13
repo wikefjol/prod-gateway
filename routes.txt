@@ -1,10 +1,23 @@
 https://lamassu.ita.chalmers.se/
+https://lamassu.ita.chalmers.se/health
+https://lamassu.ita.chalmers.se/portal
+https://lamassu.ita.chalmers.se/portal/*
+https://lamassu.ita.chalmers.se/webui
+https://lamassu.ita.chalmers.se/webui/*
+
+# LLM Gateway - Primary Namespaces
+https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions    (POST)
+https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/models              (GET)
+https://lamassu.ita.chalmers.se/llm/litellm/v1/chat/completions     (POST)
+https://lamassu.ita.chalmers.se/llm/litellm/v1/models               (GET)
+https://lamassu.ita.chalmers.se/llm/claude-code/v1/messages         (POST)
+https://lamassu.ita.chalmers.se/llm/claude-code/v1/messages/count_tokens (POST)
+
+# Deprecated (to be removed) - use /llm/* instead
 https://lamassu.ita.chalmers.se/ai/v1/chat/completions
 https://lamassu.ita.chalmers.se/ai/v1/models
-https://lamassu.ita.chalmers.se/health
 https://lamassu.ita.chalmers.se/openwebui/central/v1/*
 https://lamassu.ita.chalmers.se/openwebui/direct/v1/*
-https://lamassu.ita.chalmers.se/portal
 https://lamassu.ita.chalmers.se/provider/anthropic/openai/v1/*
 https://lamassu.ita.chalmers.se/provider/anthropic/v1/messages
 https://lamassu.ita.chalmers.se/provider/anthropic/v1/messages/count_tokens
@@ -13,4 +26,3 @@ https://lamassu.ita.chalmers.se/provider/litellm/*
 https://lamassu.ita.chalmers.se/provider/openai/v1/chat/completions
 https://lamassu.ita.chalmers.se/provider/openai/v1/models
 https://lamassu.ita.chalmers.se/provider/openai/v1/responses
-https://lamassu.ita.chalmers.se/webui

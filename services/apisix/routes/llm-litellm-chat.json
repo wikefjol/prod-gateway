@@ -1,0 +1,56 @@
+{
+  "id": "llm-litellm-chat",
+  "name": "llm-litellm-chat",
+  "uri": "/llm/litellm/v1/chat/completions",
+  "methods": ["POST", "OPTIONS"],
+  "plugins": {
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": "POST,OPTIONS",
+      "allow_headers": "Authorization,Content-Type,X-Request-Id",
+      "expose_headers": "X-Request-Id",
+      "max_age": 3600
+    },
+    "auth-transform": {
+      "mode": "bearer_to_api_key",
+      "sanitize_request_ids": true
+    },
+    "openai-auth": {
+      "header": "x-api-key",
+      "hide_credentials": true
+    },
+    "proxy-rewrite": {
+      "uri": "/v1/chat/completions",
+      "headers": {
+        "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
+        "set": {
+          "Authorization": "Bearer $LITELLM_KEY"
+        }
+      }
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    },
+    "billing-extractor": {
+      "provider": "openai",
+      "endpoint": "chat"
+    },
+    "provider-response-id": {},
+    "file-logger": {
+      "path": "/usr/local/apisix/logs/billing/llm-litellm-chat.log"
+    },
+    "response-wiretap": {
+      "enabled": true,
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-litellm-chat.jsonl"
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "scheme": "https",
+    "nodes": {
+      "$LITELLM_HOST:$LITELLM_PORT": 1
+    },
+    "pass_host": "node"
+  }
+}

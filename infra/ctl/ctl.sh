@@ -1,328 +1,382 @@
-#!/bin/bash
-# APISIX Gateway - Unified Control Script
-# Usage: ./infra/ctl/ctl.sh [--test|-t] <command> [service] [options]
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-# -------------------------
-# Configuration
-# -------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SERVICES_DIR="$PROJECT_ROOT/services"
+# Gateway control script - manages apisix + portal services
+# Usage: ./infra/ctl/ctl.sh [command] [service] [options]
 
-# Default environment
-ENV="dev"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+INFRA="$ROOT/infra"
+SERVICES_DIR="$ROOT/services"
 
-# Parse --test flag
-if [[ "${1:-}" == "--test" || "${1:-}" == "-t" ]]; then
-  ENV="test"
-  shift
-fi
+# Available services (in dependency order)
+CORE_SERVICES=(apisix portal)
 
-ENV_FILE="$PROJECT_ROOT/infra/env/.env.$ENV"
+# Default to dev environment
+ENV_NAME="${GATEWAY_ENV:-dev}"
 
-# -------------------------
-# Load environment
-# -------------------------
-if [ ! -f "$ENV_FILE" ]; then
-  echo "❌ Env file not found: $ENV_FILE" >&2
+# Parse global flags
+CLEAN_MODE=""
+for arg in "$@"; do
+  case "$arg" in
+    --test|-t) ENV_NAME="test" ;;
+    --clean) CLEAN_MODE="1" ;;
+  esac
+done
+
+# Remove flags from args
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --test|-t|--clean) ;;
+    *) ARGS+=("$arg") ;;
+  esac
+done
+set -- "${ARGS[@]:-}"
+
+CMD="${1:-help}"
+shift || true
+
+# Service argument (optional - defaults to all for up/down, required for some commands)
+SVC="${1:-}"
+[[ "$SVC" =~ ^(apisix|portal)$ ]] && shift || SVC=""
+
+ENV_FILE="$INFRA/env/.env.$ENV_NAME"
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Error: Missing env file: $ENV_FILE" >&2
   exit 1
 fi
 
+# Load env vars
 set -a
-# shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
-: "${CORE_NET:?CORE_NET missing in $ENV_FILE}"
-: "${ADMIN_KEY:?ADMIN_KEY missing in $ENV_FILE}"
-
-# -------------------------
-# Helpers
-# -------------------------
-log_info()    { echo "ℹ️  $*"; }
-log_success() { echo "✅ $*"; }
-log_error()   { echo "❌ $*" >&2; }
-log_warning() { echo "⚠️  $*"; }
-
-# Core services (etcd is implicit via apisix compose)
-CORE_SERVICES=(apisix portal)
-
-# Ensure network exists
 ensure_network() {
+  : "${CORE_NET:?CORE_NET must be set in env file}"
   if ! docker network inspect "$CORE_NET" >/dev/null 2>&1; then
-    log_info "Creating network: $CORE_NET"
-    docker network create "$CORE_NET"
+    echo "Creating network: $CORE_NET"
+    docker network create "$CORE_NET" >/dev/null
   fi
 }
 
-# Get compose command for a service
-compose_cmd() {
+# Compose command for a specific service
+dc() {
   local svc="$1"
   shift
-  docker compose --project-name "gw-$ENV-$svc" \
+  local compose_file="$SERVICES_DIR/$svc/compose.yaml"
+  if [[ ! -f "$compose_file" ]]; then
+    echo "Error: No compose.yaml for service: $svc" >&2
+    return 1
+  fi
+  docker compose \
+    -p "gw-${ENV_NAME}-${svc}" \
     --env-file "$ENV_FILE" \
-    -f "$SERVICES_DIR/$svc/compose.yaml" \
+    -f "$compose_file" \
     "$@"
 }
 
 # Check if service is running
 is_running() {
   local svc="$1"
-  compose_cmd "$svc" ps --services --filter "status=running" 2>/dev/null | grep -q "$svc"
+  dc "$svc" ps --services --filter "status=running" 2>/dev/null | grep -q .
 }
 
-# Wait for APISIX admin API
-wait_for_apisix() {
-  local port="${APISIX_ADMIN_PORT:-9180}"
-  log_info "Waiting for APISIX admin API on port $port..."
-  for _ in {1..30}; do
-    if curl -s -f "http://127.0.0.1:$port/apisix/admin/routes" -H "X-API-KEY: $ADMIN_KEY" >/dev/null 2>&1; then
-      log_success "APISIX admin API is ready"
+confirm_delete() {
+  echo "DESTRUCTIVE: This will delete volumes and data."
+  echo "Type DELETE to confirm:"
+  read -r x
+  [[ "$x" == "DELETE" ]]
+}
+
+# Git info helpers
+print_git_info() {
+  local sha branch dirty
+  sha="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+  branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+  dirty=""
+  if ! git -C "$ROOT" diff --quiet 2>/dev/null; then dirty=" (dirty)"; fi
+  echo "Git: $branch @ $sha$dirty"
+}
+
+print_running_info() {
+  local cid image_id
+  cid="$(dc apisix ps -q apisix 2>/dev/null)"
+  if [[ -n "$cid" ]]; then
+    image_id="$(docker inspect --format='{{.Image}}' "$cid" 2>/dev/null | cut -c8-19)"
+    echo "Image: ${image_id:-unknown}"
+  else
+    echo "Image: not running"
+  fi
+  echo "Admin: http://localhost:${APISIX_ADMIN_PORT:-9180}"
+}
+
+# Health polling (portable, doesn't depend on compose version)
+wait_for_healthy() {
+  local timeout="${1:-90}"
+  local start=$SECONDS
+  echo "Waiting for healthy (${timeout}s timeout)..."
+  while (( SECONDS - start < timeout )); do
+    if curl -sf "http://localhost:${APISIX_GATEWAY_PORT:-9080}/health" >/dev/null 2>&1; then
+      echo "Healthy after $((SECONDS - start))s"
       return 0
     fi
     sleep 2
   done
-  log_error "APISIX admin API failed to become ready"
+  echo "ERROR: Health check timeout after ${timeout}s" >&2
+  dc apisix logs --tail=100
   return 1
 }
 
-# Confirm destructive operation
-confirm_destructive() {
-  local op="$1"
-  echo
-  log_warning "DESTRUCTIVE: $op"
-  log_warning "This will DELETE ALL DATA"
-  echo "Type DELETE to confirm:"
-  read -r confirm
-  if [ "$confirm" != "DELETE" ]; then
-    log_error "Cancelled"
-    exit 1
+# Assert running revision matches expected (ghost killer)
+assert_revision() {
+  local expected="$1"
+  local actual
+  actual="$(curl -sI "http://localhost:${APISIX_GATEWAY_PORT:-9080}/health" 2>/dev/null | grep -i X-Gateway-Revision | awk '{print $2}' | tr -d '\r')"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "ERROR: Revision mismatch! Expected: $expected, Got: ${actual:-<none>}" >&2
+    echo "The running gateway does not match your code. Try: ./infra/ctl/ctl.sh dev --no-cache" >&2
+    return 1
   fi
+  echo "Revision verified: $actual"
 }
 
-# -------------------------
-# Commands
-# -------------------------
-
+# Start service(s)
 cmd_up() {
-  local svc="${1:-}"
+  local services=("${@:-${CORE_SERVICES[@]}}")
+  ensure_network
+  for svc in "${services[@]}"; do
+    echo "Starting $svc..."
+    dc "$svc" up -d --force-recreate --remove-orphans
+    echo "✅ $svc started"
+  done
+}
+
+# Stop service(s)
+cmd_down() {
+  local services=("${@:-${CORE_SERVICES[@]}}")
+  for svc in "${services[@]}"; do
+    echo "Stopping $svc..."
+    dc "$svc" down --remove-orphans
+  done
+}
+
+# Build service(s)
+cmd_build() {
+  local services=("${@:-${CORE_SERVICES[@]}}")
+  for svc in "${services[@]}"; do
+    echo "Building $svc..."
+    dc "$svc" build
+  done
+}
+
+# Rebuild with --no-cache
+cmd_rebuild() {
+  local svc="${1:-apisix}"
+  ensure_network
+  echo "Rebuilding $svc with --no-cache..."
+  dc "$svc" build --pull --no-cache
+  echo "Restarting $svc..."
+  dc "$svc" up -d --force-recreate --remove-orphans
+  echo "✅ Rebuild complete."
+}
+
+# Dev command - canonical way to get to known-good state
+cmd_dev() {
+  local no_cache="" nuke="" with_portal=""
+  for arg in "$@"; do
+    case "$arg" in
+      --no-cache) no_cache="1" ;;
+      --nuke) nuke="1" ;;
+      --with-portal) with_portal="1" ;;
+    esac
+  done
+
+  local git_sha
+  git_sha="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  export GIT_SHA="$git_sha"
+
+  echo "=== Gateway Dev Refresh ==="
+  print_git_info
   ensure_network
 
-  if [ -z "$svc" ]; then
-    # Start all core services
-    for s in "${CORE_SERVICES[@]}"; do
-      cmd_up "$s"
+  # Stop apisix only (not portal) unless --with-portal
+  echo "Stopping apisix..."
+  dc apisix down --remove-orphans 2>/dev/null || true
+  [[ -n "$with_portal" ]] && { dc portal down --remove-orphans 2>/dev/null || true; }
+
+  if [[ -n "$nuke" ]]; then
+    echo "NUKE MODE: will delete etcd data (fresh state)"
+    confirm_delete || exit 1
+    dc apisix down -v --remove-orphans 2>/dev/null || true
+  fi
+
+  # Build
+  echo "Building apisix..."
+  local build_args=(--build-arg "GIT_SHA=$git_sha")
+  [[ -n "$no_cache" ]] && build_args+=(--pull --no-cache)
+  dc apisix build "${build_args[@]}"
+  [[ -n "$with_portal" ]] && dc portal build ${no_cache:+--pull --no-cache}
+
+  # Start
+  echo "Starting apisix..."
+  dc apisix up -d --force-recreate --remove-orphans
+  [[ -n "$with_portal" ]] && dc portal up -d --force-recreate --remove-orphans
+
+  # Wait for healthy (portable polling, not --wait)
+  if ! wait_for_healthy 90; then
+    exit 1
+  fi
+
+  # Bootstrap (includes version header)
+  echo "Bootstrapping..."
+  "$ROOT/services/apisix/scripts/bootstrap.sh" || { echo "Bootstrap failed" >&2; exit 1; }
+
+  # Assert revision matches (ghost killer)
+  if ! assert_revision "$git_sha"; then
+    exit 1
+  fi
+
+  echo "=== Ready ==="
+  print_git_info
+  print_running_info
+}
+
+case "$CMD" in
+  up)
+    if [[ -n "$CLEAN_MODE" ]]; then
+      echo "Clean mode: removing apisix volumes (etcd data)..."
+      confirm_delete || exit 1
+      dc apisix down -v --remove-orphans 2>/dev/null || true
+    fi
+    if [[ -n "$SVC" ]]; then
+      cmd_up "$SVC"
+    else
+      cmd_up "${CORE_SERVICES[@]}"
+    fi
+    echo "Gateway ready. Admin: http://localhost:${APISIX_ADMIN_PORT:-9180}"
+    ;;
+
+  down)
+    if [[ -n "$CLEAN_MODE" ]]; then
+      confirm_delete || exit 1
+      for svc in portal apisix; do
+        dc "$svc" down -v --remove-orphans 2>/dev/null || true
+      done
+    elif [[ -n "$SVC" ]]; then
+      cmd_down "$SVC"
+    else
+      cmd_down portal apisix
+    fi
+    ;;
+
+  build)
+    if [[ -n "$SVC" ]]; then
+      cmd_build "$SVC"
+    else
+      cmd_build "${CORE_SERVICES[@]}"
+    fi
+    ;;
+
+  rebuild)
+    cmd_rebuild "${SVC:-apisix}"
+    ;;
+
+  dev)
+    cmd_dev "$@"
+    ;;
+
+  restart)
+    if [[ -n "$SVC" ]]; then
+      dc "$SVC" restart "$@"
+    else
+      for svc in "${CORE_SERVICES[@]}"; do
+        dc "$svc" restart
+      done
+    fi
+    ;;
+
+  reset)
+    echo "DEPRECATED: 'reset' is now an alias for 'dev'. Use 'dev' directly." >&2
+    cmd_dev "$@"
+    ;;
+
+  logs)
+    local target="${SVC:-apisix}"
+    dc "$target" logs "$@"
+    ;;
+
+  ps|status)
+    for svc in "${CORE_SERVICES[@]}"; do
+      echo "=== $svc ==="
+      dc "$svc" ps 2>/dev/null || echo "(not running)"
     done
-    return
-  fi
+    ;;
 
-  if [ ! -d "$SERVICES_DIR/$svc" ]; then
-    log_error "Unknown service: $svc"
-    exit 1
-  fi
+  exec)
+    local target="${SVC:-apisix}"
+    dc "$target" exec "$target" "$@"
+    ;;
 
-  if is_running "$svc"; then
-    log_info "$svc already running"
-    return
-  fi
+  shell)
+    local target="${SVC:-apisix}"
+    dc "$target" exec "$target" sh
+    ;;
 
-  # Ensure log directories exist with correct permissions for APISIX (uid 636)
-  if [ "$svc" == "apisix" ]; then
-    mkdir -p "$SERVICES_DIR/apisix/logs/billing" 2>/dev/null || true
-    mkdir -p "$SERVICES_DIR/apisix/logs/wiretap" 2>/dev/null || true
-    chmod 777 "$SERVICES_DIR/apisix/logs/billing" 2>/dev/null || true
-    chmod 777 "$SERVICES_DIR/apisix/logs/wiretap" 2>/dev/null || true
-  fi
+  routes)
+    curl -s "http://localhost:${APISIX_ADMIN_PORT:-9180}/apisix/admin/routes" \
+      -H "X-API-KEY: ${ADMIN_KEY}" | \
+      python3 -c "import sys,json; d=json.load(sys.stdin); [print(f\"{r['value'].get('id','?'):30} {r['value'].get('uri','?')}\") for r in d.get('list',[])]" 2>/dev/null || \
+      echo "Failed to fetch routes. Is gateway running?"
+    ;;
 
-  log_info "Starting $svc..."
-  compose_cmd "$svc" up -d --pull always --force-recreate --remove-orphans
-  log_success "$svc started"
+  bootstrap)
+    "$ROOT/services/apisix/scripts/bootstrap.sh" ${CLEAN_MODE:+--clean} "$@" || echo "Bootstrap failed"
+    ;;
 
-  # Bootstrap routes after apisix starts
-  if [ "$svc" == "apisix" ]; then
-    if wait_for_apisix; then
-      cmd_bootstrap
-    fi
-  fi
-}
+  help|*)
+    cat <<EOF
+Gateway Control Script
 
-cmd_down() {
-  local svc="${1:-}"
-  local clean="${2:-}"
+Usage: ./infra/ctl/ctl.sh [command] [service] [options]
 
-  if [ -z "$svc" ]; then
-    # Stop all in reverse order
-    for s in $(printf '%s\n' "${CORE_SERVICES[@]}" | tac); do
-      cmd_down "$s" "$clean"
-    done
-    return
-  fi
+=== RECOMMENDED ===
+  dev                 Build + start + bootstrap + verify revision
+                      --no-cache     Force fresh build (cache-bust)
+                      --with-portal  Also manage portal service
+                      --nuke         Delete etcd volume (fresh state, DELETE confirm)
 
-  if [ ! -d "$SERVICES_DIR/$svc" ]; then
-    log_error "Unknown service: $svc"
-    exit 1
-  fi
+=== Other Commands ===
+  up [service]        Start (may use stale image)
+  down [service]      Stop
+  build [service]     Build (may use cache)
+  rebuild [service]   Build --no-cache + restart (single svc)
+  restart [service]   [WARN: reuses old container]
+  reset               DEPRECATED - use 'dev'
+  logs [service] [-f] View logs (default: apisix)
+  ps/status           Show status of all services
+  exec [service] cmd  Run command in container (default: apisix)
+  shell [service]     Open shell in container (default: apisix)
+  routes              List routes from Admin API
+  bootstrap           Load routes into APISIX (additive)
 
-  log_info "Stopping $svc..."
-  if [ "$clean" == "--clean" ]; then
-    confirm_destructive "down $svc --clean"
-    compose_cmd "$svc" down -v --remove-orphans
-    log_success "$svc stopped (data removed)"
-  else
-    compose_cmd "$svc" down --remove-orphans
-    log_success "$svc stopped"
-  fi
-}
+Services: ${CORE_SERVICES[*]}
 
-cmd_reset() {
-  local svc="${1:-}"
-  local clean="${2:-}"
-
-  if [ "$clean" == "--clean" ]; then
-    cmd_down "$svc" --clean
-  else
-    cmd_down "$svc"
-  fi
-  cmd_up "$svc"
-
-  # Bootstrap after apisix comes up
-  if [ -z "$svc" ] || [ "$svc" == "apisix" ]; then
-    if wait_for_apisix; then
-      cmd_bootstrap
-    fi
-  fi
-}
-
-cmd_logs() {
-  local svc="${1:-}"
-  shift || true
-  local follow=""
-
-  # Check for -f flag
-  for arg in "$@"; do
-    if [ "$arg" == "-f" ] || [ "$arg" == "--follow" ]; then
-      follow="-f"
-    fi
-  done
-
-  if [ -z "$svc" ]; then
-    log_error "Usage: ctl logs <service> [-f]"
-    exit 1
-  fi
-
-  if [ ! -d "$SERVICES_DIR/$svc" ]; then
-    log_error "Unknown service: $svc"
-    exit 1
-  fi
-
-  compose_cmd "$svc" logs $follow "$svc"
-}
-
-cmd_status() {
-  log_info "Environment: $ENV (network: $CORE_NET)"
-  echo
-  for svc in "${CORE_SERVICES[@]}"; do
-    if [ -d "$SERVICES_DIR/$svc" ]; then
-      if is_running "$svc"; then
-        echo "  ✅ $svc: running"
-      else
-        echo "  ⬚  $svc: stopped"
-      fi
-    fi
-  done
-}
-
-cmd_routes() {
-  local port="${APISIX_ADMIN_PORT:-9180}"
-  if ! curl -s -f "http://127.0.0.1:$port/apisix/admin/routes" -H "X-API-KEY: $ADMIN_KEY" >/dev/null 2>&1; then
-    log_error "APISIX admin API not accessible"
-    exit 1
-  fi
-
-  log_info "Routes:"
-  curl -s "http://127.0.0.1:$port/apisix/admin/routes" -H "X-API-KEY: $ADMIN_KEY" | \
-    jq -r '.list[] | "  \(.value.id // "?") - \(.value.name // "unnamed") [\(.value.uri // .value.uris[0] // "no-uri")]"' 2>/dev/null || \
-    curl -s "http://127.0.0.1:$port/apisix/admin/routes" -H "X-API-KEY: $ADMIN_KEY"
-}
-
-cmd_bootstrap() {
-  if ! wait_for_apisix; then
-    log_error "Cannot bootstrap: APISIX not healthy"
-    exit 1
-  fi
-
-  log_info "Running bootstrap..."
-  "$SERVICES_DIR/apisix/scripts/bootstrap.sh" "$ENV"
-}
-
-cmd_build() {
-  local svc="${1:-}"
-  local cache="${2:-}"
-
-  if [ -z "$svc" ]; then
-    log_error "Usage: ctl build <service> [--cache]"
-    exit 1
-  fi
-
-  if [ ! -d "$SERVICES_DIR/$svc" ]; then
-    log_error "Unknown service: $svc"
-    exit 1
-  fi
-
-  log_info "Building $svc..."
-  if [ "$cache" == "--cache" ]; then
-    compose_cmd "$svc" build --pull
-  else
-    compose_cmd "$svc" build --no-cache --pull
-  fi
-  log_success "$svc built"
-}
-
-cmd_help() {
-  cat <<EOF
-APISIX Gateway Control Script
-
-Usage: ./infra/ctl/ctl.sh [--test|-t] <command> [service] [options]
+Options:
+  --clean             Clean mode (context-dependent, requires confirmation):
+                        up --clean      Remove etcd volume, fresh start
+                        down --clean    Stop + remove all volumes
+                        bootstrap --clean  Delete all routes first
+  --test, -t          Use test environment (different ports)
 
 Environment:
-  Default: dev
-  --test, -t    Use test environment
-
-Commands:
-  up [service]              Start service(s) (default: all core)
-  down [service] [--clean]  Stop service(s); --clean removes volumes
-  reset [service] [--clean] Restart service(s) + bootstrap
-  logs <service> [-f]       View logs
-  status                    Show status of all services
-  routes                    List APISIX routes
-  bootstrap                 Load routes into APISIX
-  build <service> [--cache] Build service
-
-Core services: apisix portal (etcd bundled with apisix)
+  GATEWAY_ENV         Set environment (dev|test), default: dev
 
 Examples:
-  ./infra/ctl/ctl.sh up                    # Start all dev services
-  ./infra/ctl/ctl.sh up apisix             # Start only apisix
-  ./infra/ctl/ctl.sh -t up                 # Start all test services
-  ./infra/ctl/ctl.sh reset                 # Restart + bootstrap
+  ./infra/ctl/ctl.sh dev                   # Build + start + bootstrap + verify
+  ./infra/ctl/ctl.sh dev --no-cache        # Cache-bust build
+  ./infra/ctl/ctl.sh dev --with-portal     # Full stack
+  ./infra/ctl/ctl.sh dev --nuke            # Fresh etcd state
   ./infra/ctl/ctl.sh logs apisix -f        # Follow apisix logs
-  ./infra/ctl/ctl.sh down --clean          # Stop all + remove data
 EOF
-}
-
-# -------------------------
-# Main
-# -------------------------
-case "${1:-help}" in
-  up)        shift; cmd_up "$@" ;;
-  down)      shift; cmd_down "$@" ;;
-  reset)     shift; cmd_reset "$@" ;;
-  logs)      shift; cmd_logs "$@" ;;
-  status)    cmd_status ;;
-  routes)    cmd_routes ;;
-  bootstrap) cmd_bootstrap ;;
-  build)     shift; cmd_build "$@" ;;
-  help|*)    cmd_help ;;
+    ;;
 esac
