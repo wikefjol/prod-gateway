@@ -23,10 +23,12 @@ COPY entrypoint-simple.sh /docker-entrypoint-custom.sh
 # Copy custom Lua modules
 COPY lua /usr/local/apisix/lua
 
-RUN chmod +x /docker-entrypoint-custom.sh && \
+RUN mkdir -p /usr/local/apisix/logs/billing && \
+    chmod +x /docker-entrypoint-custom.sh && \
     chown apisix:apisix /usr/local/apisix/conf/config.yaml && \
     chown apisix:apisix /docker-entrypoint-custom.sh && \
-    chown -R apisix:apisix /usr/local/apisix/lua
+    chown -R apisix:apisix /usr/local/apisix/lua && \
+    chown -R apisix:apisix /usr/local/apisix/logs/billing
 
 USER root
 ENTRYPOINT ["/docker-entrypoint-custom.sh"]
