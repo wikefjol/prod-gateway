@@ -1,13 +1,30 @@
 #!/bin/bash
 # APISIX Bootstrap - Loads consumer groups + routes into APISIX
-# Usage: ./services/apisix/scripts/bootstrap.sh [dev|test]
+# Usage: ./services/apisix/scripts/bootstrap.sh [--clean] [dev|test]
 
 set -euo pipefail
 
 # -------------------------
 # Configuration
 # -------------------------
-ENVIRONMENT="${1:-dev}"
+CLEAN_ROUTES=false
+
+# Parse flags
+for arg in "$@"; do
+  case "$arg" in
+    --clean) CLEAN_ROUTES=true ;;
+  esac
+done
+
+# Filter out flags to get environment
+ENVIRONMENT="dev"
+for arg in "$@"; do
+  case "$arg" in
+    --*) ;;
+    *) ENVIRONMENT="$arg" ;;
+  esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$SERVICE_DIR/../.." && pwd)"
@@ -66,25 +83,18 @@ CORE_ROUTES=(
   "root-redirect-route.json"
 )
 
-# Provider routes (optional; gated by API keys)
-PROVIDER_ROUTES=(
-  # Provider-native routes
-  "provider-anthropic-messages.json"
-  "provider-anthropic-count-tokens.json"
-  "provider-anthropic-models.json"
-  "provider-anthropic-openai.json"
-  "provider-openai-chat.json"
-  "provider-openai-models.json"
-  "provider-openai-responses.json"
-  "provider-litellm.json"
-  # OpenWebUI routes
-  "openwebui-central.json"
-  "openwebui-direct.json"
-  # Unified AI routes (model-based routing via ai-proxy)
-  "ai-chat-openai.json"
-  "ai-chat-anthropic.json"
-  "ai-chat-fallback.json"
-  "ai-models.json"
+# LLM Gateway routes (new /llm/* namespace)
+LLM_ROUTES=(
+  # Setup A: LiteLLM (external routing)
+  "llm-litellm-chat.json"
+  "llm-litellm-models.json"
+  # Setup B: ai-proxy (APISIX-native routing)
+  "llm-ai-proxy-chat-openai.json"
+  "llm-ai-proxy-chat-anthropic.json"
+  "llm-ai-proxy-models.json"
+  # Claude Code sidecar (native Anthropic, restricted to claude_code_users)
+  "llm-claude-code-messages.json"
+  "llm-claude-code-count-tokens.json"
 )
 
 # -------------------------
@@ -101,6 +111,30 @@ wait_for_apisix() {
   done
   log_error "APISIX admin API failed to become ready"
   return 1
+}
+
+# -------------------------
+# Clean all routes (--clean flag)
+# -------------------------
+clean_all_routes() {
+  log_info "Cleaning all existing routes..."
+
+  local route_ids
+  route_ids=$(curl -s "$ADMIN_API/routes" -H "X-API-KEY: $ADMIN_KEY" | \
+    jq -r '.list[].value.id // empty' 2>/dev/null)
+
+  if [ -z "$route_ids" ]; then
+    log_info "No routes to clean"
+    return 0
+  fi
+
+  local count=0
+  for id in $route_ids; do
+    curl -s -X DELETE "$ADMIN_API/routes/$id" -H "X-API-KEY: $ADMIN_KEY" >/dev/null
+    count=$((count + 1))
+  done
+
+  log_success "Deleted $count routes"
 }
 
 # -------------------------
@@ -212,6 +246,44 @@ load_plugin_metadata() {
 }
 
 # -------------------------
+# Version Header (global rule)
+# -------------------------
+bootstrap_version_header() {
+  local git_sha="${GIT_SHA:-unknown}"
+  log_info "Setting X-Gateway-Revision header: $git_sha"
+
+  local payload
+  payload=$(cat <<EOF
+{
+  "plugins": {
+    "response-rewrite": {
+      "headers": {
+        "set": {
+          "X-Gateway-Revision": "$git_sha"
+        }
+      }
+    }
+  }
+}
+EOF
+)
+
+  local response http_code
+  response="$(curl -sS -w "\n%{http_code}" -X PUT "$ADMIN_API/global_rules/9999" \
+    -H "Content-Type: application/json" \
+    -H "X-API-KEY: $ADMIN_KEY" \
+    -d "$payload")"
+
+  http_code="$(tail -n1 <<<"$response")"
+  if [[ "$http_code" =~ ^(200|201)$ ]]; then
+    log_success "Version header configured: $git_sha"
+  else
+    log_error "Failed to set version header (HTTP $http_code)"
+    return 1
+  fi
+}
+
+# -------------------------
 # Bootstrap steps
 # -------------------------
 
@@ -282,12 +354,12 @@ bootstrap_core_routes() {
   return 0
 }
 
-bootstrap_provider_routes_if_configured() {
+bootstrap_llm_routes() {
   if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${LITELLM_KEY:-}" ]; then
-    log_info "Loading provider routes (API keys detected)..."
+    log_info "Loading LLM routes (API keys detected)..."
     local ok=0 fail=0
 
-    for route in "${PROVIDER_ROUTES[@]}"; do
+    for route in "${LLM_ROUTES[@]}"; do
       if load_route "$route"; then
         ok=$((ok + 1))
       else
@@ -295,13 +367,13 @@ bootstrap_provider_routes_if_configured() {
       fi
     done
 
-    log_info "Loaded $ok/${#PROVIDER_ROUTES[@]} provider routes"
+    log_info "Loaded $ok/${#LLM_ROUTES[@]} LLM routes"
 
     if [ "$fail" -ne 0 ]; then
-      log_error "Some provider routes failed to load ($fail failures). Continuing."
+      log_error "Some LLM routes failed to load ($fail failures). Continuing."
     fi
   else
-    log_info "Skipping provider routes (no API keys found)"
+    log_info "Skipping LLM routes (no API keys found)"
   fi
 }
 
@@ -319,6 +391,16 @@ main() {
     exit 1
   fi
 
+  # Set version header (global rule) - do this first for observability
+  if ! bootstrap_version_header; then
+    log_error "Failed to set version header, continuing anyway..."
+  fi
+
+  # Clean routes if --clean flag was passed
+  if [ "$CLEAN_ROUTES" = true ]; then
+    clean_all_routes
+  fi
+
   if ! bootstrap_consumer_groups; then
     exit 1
   fi
@@ -331,7 +413,7 @@ main() {
     exit 1
   fi
 
-  bootstrap_provider_routes_if_configured
+  bootstrap_llm_routes
 
   log_success "Bootstrap completed for $ENVIRONMENT environment"
 }

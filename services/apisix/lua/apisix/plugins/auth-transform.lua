@@ -1,56 +1,77 @@
 local core = require("apisix.core")
 
-local M = {}
+local plugin_name = "auth-transform"
 
-function M.bearer_to_api_key(conf, ctx)
-  -- Get the existing x-api-key header
-  local api_key = core.request.header(ctx, "x-api-key")
+local schema = {
+    type = "object",
+    properties = {
+        mode = {
+            type = "string",
+            enum = {"bearer_to_api_key"},
+            default = "bearer_to_api_key"
+        },
+        sanitize_request_ids = {
+            type = "boolean",
+            default = true
+        }
+    }
+}
 
-  -- Get the Authorization header
-  local auth_header = core.request.header(ctx, "Authorization")
+local _M = {
+    version = 0.1,
+    priority = 12020,  -- Run before auth plugins (key-auth is 2500)
+    name = plugin_name,
+    schema = schema
+}
 
-  -- Case 1: If X-Api-Key exists and non-empty
-  if api_key and api_key ~= "" then
-    -- Do NOT overwrite it from Authorization
-    -- Just remove Authorization to avoid conflicts but preserve the existing X-Api-Key
-    if auth_header then
-      core.request.set_header(ctx, "Authorization", nil)
-      core.log.info("Keeping existing x-api-key and removing Authorization header")
-    end
-  -- Case 2: If X-Api-Key is missing but Authorization exists and is Bearer format
-  elseif auth_header and auth_header:sub(1, 7) == 'Bearer ' then
-    -- Extract the token part after "Bearer "
-    local token = auth_header:sub(8)
-
-    -- Set it as x-api-key header (use core.request.set_header to update ctx cache)
-    core.request.set_header(ctx, "x-api-key", token)
-
-    -- Remove the Authorization header to avoid conflicts
-    core.request.set_header(ctx, "Authorization", nil)
-
-    core.log.info("Transformed Bearer token to x-api-key (no x-api-key was present)")
-  end
-
-  -- Note: The key-auth plugin's hide_credentials option will handle hiding x-api-key from upstream
-  -- if configured properly in the route definition
+function _M.check_schema(conf, schema_type)
+    return core.schema.check(schema, conf)
 end
 
 -- Sanitize request ID headers to prevent client override of gateway-generated IDs
 -- - Strips incoming X-Request-Id so the request-id plugin generates a fresh one
 -- - Preserves client's value by moving it to X-User-Request-Id (if not already set)
-function M.sanitize_request_ids(conf, ctx)
-  local incoming_request_id = core.request.header(ctx, "X-Request-Id")
-  local user_request_id = core.request.header(ctx, "X-User-Request-Id")
+local function sanitize_request_ids(ctx)
+    local incoming_request_id = core.request.header(ctx, "X-Request-Id")
+    local user_request_id = core.request.header(ctx, "X-User-Request-Id")
 
-  -- If client sent X-Request-Id, move it to X-User-Request-Id (if not already set)
-  if incoming_request_id and incoming_request_id ~= "" then
-    if not user_request_id or user_request_id == "" then
-      core.request.set_header(ctx, "X-User-Request-Id", incoming_request_id)
-      core.log.info("Moved client X-Request-Id to X-User-Request-Id: ", incoming_request_id)
+    if incoming_request_id and incoming_request_id ~= "" then
+        if not user_request_id or user_request_id == "" then
+            core.request.set_header(ctx, "X-User-Request-Id", incoming_request_id)
+            core.log.info("Moved client X-Request-Id to X-User-Request-Id: ", incoming_request_id)
+        end
+        core.request.set_header(ctx, "X-Request-Id", nil)
     end
-    -- Remove X-Request-Id so request-id plugin generates a fresh one
-    core.request.set_header(ctx, "X-Request-Id", nil)
-  end
 end
 
-return M
+-- Convert Authorization: Bearer <token> to X-Api-Key: <token>
+local function bearer_to_api_key(ctx)
+    local api_key = core.request.header(ctx, "x-api-key")
+    local auth_header = core.request.header(ctx, "Authorization")
+
+    -- Case 1: X-Api-Key exists - preserve it, remove Authorization
+    if api_key and api_key ~= "" then
+        if auth_header then
+            core.request.set_header(ctx, "Authorization", nil)
+            core.log.info("Keeping existing x-api-key and removing Authorization header")
+        end
+    -- Case 2: Authorization: Bearer exists - convert to X-Api-Key
+    elseif auth_header and auth_header:sub(1, 7) == "Bearer " then
+        local token = auth_header:sub(8)
+        core.request.set_header(ctx, "x-api-key", token)
+        core.request.set_header(ctx, "Authorization", nil)
+        core.log.info("Transformed Bearer token to x-api-key")
+    end
+end
+
+function _M.rewrite(conf, ctx)
+    if conf.sanitize_request_ids ~= false then
+        sanitize_request_ids(ctx)
+    end
+
+    if conf.mode == "bearer_to_api_key" or conf.mode == nil then
+        bearer_to_api_key(ctx)
+    end
+end
+
+return _M

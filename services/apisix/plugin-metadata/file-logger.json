@@ -1,38 +1,25 @@
 {
   "id": "file-logger",
   "log_format": {
-    "event_version": "v2",
-    "event_type": "llm.request.completed.v1",
-    "ts": "$time_iso8601",
-    "gateway_env": "$ENVIRONMENT",
-
+    "timestamp": "$time_iso8601",
     "gw_request_id": "$request_id",
-    "x_request_id": "$sent_http_x_request_id",
-    "user_request_id": "$http_x_user_request_id",
-
-    "_dbg_http_x_request_id": "$http_x_request_id",
-    "_dbg_upstream_x_request_id": "$upstream_http_x_request_id",
-
-    "provider": "$billing_provider",
-    "endpoint": "$billing_endpoint",
-    "is_streaming": "$billing_is_streaming",
 
     "consumer": "$consumer_name",
     "consumer_group_id": "$consumer_group_id",
     "route_name": "$route_name",
 
-    "model": "$billing_model",
-    "provider_request_id": "$upstream_http_request_id",
-    "provider_response_id": "$billing_provider_response_id",
-    "usage": "$billing_usage_json",
-    "usage_present": "$billing_usage_present",
-    "usage_expected": "$billing_usage_expected",
-    "extract_status": "$billing_extract_status",
-    "extract_reason": "$billing_extract_reason",
-    "parse_attempted": "$billing_parse_attempted",
-    "truncated": "$billing_truncated",
+    "upstream_provider": "$billing_provider",
+    "request_type": "$request_type",
+
+    "model_requested": "$request_llm_model",
+    "model_effective": "$llm_model",
+
+    "prompt_tokens": "$llm_prompt_tokens",
+    "completion_tokens": "$llm_completion_tokens",
+    "ttft_ms": "$llm_time_to_first_token",
 
     "status": "$status",
-    "upstream_latency": "$upstream_response_time"
+    "upstream_latency": "$upstream_response_time",
+    "provider_response_id": "$provider_response_id"
   }
 }

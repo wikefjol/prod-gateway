@@ -1,0 +1,30 @@
+{
+  "id": "llm-ai-proxy-models",
+  "name": "llm-ai-proxy-models",
+  "uri": "/llm/ai-proxy/v1/models",
+  "methods": ["GET", "OPTIONS"],
+  "plugins": {
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": "GET,OPTIONS",
+      "allow_headers": "Authorization,Content-Type,X-Request-Id",
+      "expose_headers": "X-Request-Id",
+      "max_age": 3600
+    },
+    "auth-transform": {
+      "mode": "bearer_to_api_key",
+      "sanitize_request_ids": true
+    },
+    "openai-auth": {
+      "header": "x-api-key",
+      "hide_credentials": true
+    },
+    "model-policy": {
+      "action": "render"
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    }
+  }
+}

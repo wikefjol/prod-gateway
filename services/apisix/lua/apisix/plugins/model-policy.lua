@@ -1,139 +1,198 @@
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 
-local M = {}
+local plugin_name = "model-policy"
 
--- Model registry: canonical list of known models
--- created: unix timestamp (approx release date for SDK compat)
+-- MODEL_REGISTRY: Single source of truth for all models
+-- Add new models here; no other place should define model lists
 local MODEL_REGISTRY = {
-  { id = "gpt-4o", owned_by = "system", provider = "openai", created = 1715367049 },
-  { id = "gpt-4o-mini", owned_by = "system", provider = "openai", created = 1721172741 },
-  { id = "gpt-4-turbo", owned_by = "system", provider = "openai", created = 1712361441 },
-  { id = "o1", owned_by = "system", provider = "openai", created = 1734130800 },
-  { id = "o1-mini", owned_by = "system", provider = "openai", created = 1725667200 },
-  { id = "o3-mini", owned_by = "system", provider = "openai", created = 1738195200 },
-  { id = "claude-sonnet-4-20250514", owned_by = "anthropic", provider = "anthropic", created = 1747267200 },
-  { id = "claude-3-5-sonnet-20241022", owned_by = "anthropic", provider = "anthropic", created = 1729555200 },
-  { id = "claude-3-5-haiku-20241022", owned_by = "anthropic", provider = "anthropic", created = 1729555200 },
-  { id = "claude-3-opus-20240229", owned_by = "anthropic", provider = "anthropic", created = 1709164800 },
+    { id = "gpt-4o", provider = "openai", owned_by = "system", created = 1715367049 },
+    { id = "gpt-4o-mini", provider = "openai", owned_by = "system", created = 1721172741 },
+    { id = "gpt-4-turbo", provider = "openai", owned_by = "system", created = 1712361441 },
+    { id = "gpt-4", provider = "openai", owned_by = "openai", created = 1687882411 },
+    { id = "gpt-3.5-turbo-0125", provider = "openai", owned_by = "openai", created = 1677610602 },
+    { id = "o1", provider = "openai", owned_by = "system", created = 1734393600 },
+    { id = "o1-mini", provider = "openai", owned_by = "system", created = 1725926400 },
+    { id = "o1-preview", provider = "openai", owned_by = "system", created = 1725926400 },
+    { id = "o3-mini", provider = "openai", owned_by = "system", created = 1738195200 },
+    { id = "claude-3-5-sonnet-20241022", provider = "anthropic", owned_by = "anthropic", created = 1729555200 },
+    { id = "claude-3-5-haiku-20241022", provider = "anthropic", owned_by = "anthropic", created = 1729555200 },
+    { id = "claude-3-opus-20240229", provider = "anthropic", owned_by = "anthropic", created = 1709164800 },
+    { id = "claude-3-sonnet-20240229", provider = "anthropic", owned_by = "anthropic", created = 1709164800 },
+    { id = "claude-3-haiku-20240307", provider = "anthropic", owned_by = "anthropic", created = 1709769600 },
+    { id = "claude-sonnet-4-20250514", provider = "anthropic", owned_by = "anthropic", created = 1747180800 },
+    { id = "claude-opus-4-20250514", provider = "anthropic", owned_by = "anthropic", created = 1747180800 },
+    -- Side-by-side testing models (match LiteLLM names)
+    { id = "gpt-4.1-2025-04-14", provider = "openai", owned_by = "system", created = 1744588800 },
+    { id = "o3-mini-2025-01-31", provider = "openai", owned_by = "system", created = 1738281600 },
+    { id = "claude-sonnet-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
+    { id = "claude-opus-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
+    { id = "claude-haiku-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
 }
 
--- Build lookup table for O(1) checks
-local MODEL_LOOKUP = {}
-for _, m in ipairs(MODEL_REGISTRY) do
-  MODEL_LOOKUP[m.id] = m
-end
-
--- Allowlists per consumer group (explicit model IDs, or "*" for all known)
+-- Access control: models allowed per consumer group
+-- "*" means all models in MODEL_REGISTRY
 local ALLOWED_MODELS_BY_GROUP = {
-  base_user = {
-    ["gpt-4o-mini"] = true,
-    ["claude-3-5-haiku-20241022"] = true,
-  },
-  premium_user = {
-    ["*"] = true,  -- all KNOWN models allowed
-  },
+    base_user = {
+        "gpt-4o-mini",
+        "gpt-3.5-turbo-0125",
+        "claude-3-5-haiku-20241022",
+        "claude-3-haiku-20240307",
+    },
+    premium_user = "*",  -- All models
+    claude_code_users = "*",  -- For sidecar
 }
 
-local DEFAULT_GROUP = "base_user"
-
--- Get consumer group ID (check multiple locations for safety)
-function M.get_group_id(ctx)
-  -- APISIX exposes group as ctx.consumer_group_id after key-auth
-  if ctx.consumer_group_id and ctx.consumer_group_id ~= "" then
-    return ctx.consumer_group_id
-  end
-  -- Fallback: check consumer object
-  if ctx.consumer and ctx.consumer.group_id then
-    return ctx.consumer.group_id
-  end
-  return DEFAULT_GROUP
+-- Build lookup tables for efficiency
+local MODEL_BY_ID = {}
+for _, m in ipairs(MODEL_REGISTRY) do
+    MODEL_BY_ID[m.id] = m
 end
 
--- Get requested model from body (cached)
-function M.get_requested_model(ctx)
-  if ctx._model_policy_model ~= nil then
-    return ctx._model_policy_model
-  end
-  local body, err = core.request.get_body()
-  if not body then
-    ctx._model_policy_model = false
-    return nil
-  end
-  local req = cjson.decode(body)
-  if not req or not req.model then
-    ctx._model_policy_model = false
-    return nil
-  end
-  ctx._model_policy_model = req.model
-  return req.model
+local schema = {
+    type = "object",
+    properties = {
+        action = {
+            type = "string",
+            enum = {"enforce", "render"},
+            default = "enforce"
+        }
+    },
+    required = {"action"}
+}
+
+-- Register ctx vars for logging
+core.ctx.register_var("model_requested", function(ctx)
+    return ctx.model_requested or ""
+end)
+
+core.ctx.register_var("model_effective", function(ctx)
+    return ctx.model_effective or ""
+end)
+
+core.ctx.register_var("upstream_provider", function(ctx)
+    return ctx.upstream_provider or ""
+end)
+
+local _M = {
+    version = 0.1,
+    priority = 2000,  -- Run after auth (key-auth is 2500, openai-auth is 2500)
+    name = plugin_name,
+    schema = schema
+}
+
+function _M.check_schema(conf, schema_type)
+    return core.schema.check(schema, conf)
 end
 
--- Check if model is in registry
-function M.is_known(model)
-  return MODEL_LOOKUP[model] ~= nil
+-- Send OpenAI-format error response
+local function send_error(status, message, err_type, code)
+    local body = core.json.encode({
+        error = {
+            message = message,
+            type = err_type or "invalid_request_error",
+            code = code,
+            param = core.json.null
+        }
+    })
+    core.response.set_header("Content-Type", "application/json")
+    return status, body
 end
 
--- Check if model is allowed for group ("*" = all KNOWN models)
-function M.is_allowed(group_id, model)
-  local allowlist = ALLOWED_MODELS_BY_GROUP[group_id]
-  if not allowlist then
-    return false
-  end
-  if allowlist["*"] then
-    return M.is_known(model)  -- wildcard only allows known models
-  end
-  return allowlist[model] == true
-end
-
--- Send OpenAI-style error and exit
-function M.reject(status, message, code, param)
-  ngx.status = status
-  ngx.header["Content-Type"] = "application/json"
-  local err = { error = { message = message, type = "invalid_request_error", code = code } }
-  if param then err.error.param = param end
-  ngx.say(cjson.encode(err))
-  ngx.exit(status)
-end
-
--- Main enforcement (call in access phase AFTER key-auth)
-function M.enforce_chat_model_access(conf, ctx)
-  -- Safety: if consumer not set, key-auth hasn't run or failed - let it handle auth
-  if not ctx.consumer and not ctx.consumer_name then
-    return  -- don't duplicate auth errors
-  end
-
-  local model = M.get_requested_model(ctx)
-  if not model then
-    return M.reject(400, "Missing required parameter: model", "missing_model", "model")
-  end
-  if not M.is_known(model) then
-    return M.reject(400, "Unknown model: " .. model .. ". Use GET /ai/v1/models for available models.", "model_not_found", "model")
-  end
-
-  local group_id = M.get_group_id(ctx)
-  if not M.is_allowed(group_id, model) then
-    return M.reject(403, "Model '" .. model .. "' is not available for your access tier.", "model_forbidden", "model")
-  end
-  -- allowed: continue to ai-proxy
-end
-
--- Render filtered /models response
-function M.render_models_for_group(conf, ctx)
-  local group_id = M.get_group_id(ctx)
-  local allowlist = ALLOWED_MODELS_BY_GROUP[group_id] or {}
-  local data = {}
-
-  for _, m in ipairs(MODEL_REGISTRY) do
-    if allowlist["*"] or allowlist[m.id] then
-      data[#data + 1] = { id = m.id, object = "model", created = m.created, owned_by = m.owned_by }
+-- Check if model is allowed for consumer group
+local function is_model_allowed(model_id, group_id)
+    local allowed = ALLOWED_MODELS_BY_GROUP[group_id]
+    if not allowed then
+        return false
     end
-  end
-
-  ngx.status = 200
-  ngx.header["Content-Type"] = "application/json"
-  ngx.say(cjson.encode({ object = "list", data = data }))
-  ngx.exit(200)
+    if allowed == "*" then
+        return true
+    end
+    for _, m in ipairs(allowed) do
+        if m == model_id then
+            return true
+        end
+    end
+    return false
 end
 
-return M
+-- Enforce model access for chat completions (action=enforce)
+local function enforce_chat_model_access(conf, ctx)
+    local body, err = core.request.get_body()
+    if not body then
+        return send_error(400, "Request body required", "invalid_request_error", "missing_body")
+    end
+
+    local req = cjson.decode(body)
+    if not req then
+        return send_error(400, "Invalid JSON", "invalid_request_error", "invalid_json")
+    end
+
+    local model = req.model
+    if not model or model == "" then
+        return send_error(400, "Model is required", "invalid_request_error", "missing_model")
+    end
+
+    ctx.model_requested = model
+
+    -- Validate model exists in registry
+    local model_info = MODEL_BY_ID[model]
+    if not model_info then
+        return send_error(400,
+            string.format("Unknown model: %s", model),
+            "invalid_request_error",
+            "unknown_model"
+        )
+    end
+
+    -- Check consumer group access
+    local group_id = ctx.consumer_group_id
+    if group_id and not is_model_allowed(model, group_id) then
+        return send_error(403,
+            string.format("Model '%s' not available for your subscription tier", model),
+            "invalid_request_error",
+            "model_not_allowed"
+        )
+    end
+
+    -- Set ctx vars for logging and routing
+    ctx.model_effective = model
+    ctx.upstream_provider = model_info.provider
+
+    core.log.info("model-policy: model=", model, " provider=", model_info.provider, " group=", group_id or "none")
+end
+
+-- Render /models response filtered by consumer group (action=render)
+local function render_models_for_group(conf, ctx)
+    local group_id = ctx.consumer_group_id
+    local models = {}
+
+    for _, m in ipairs(MODEL_REGISTRY) do
+        if not group_id or is_model_allowed(m.id, group_id) then
+            table.insert(models, {
+                id = m.id,
+                object = "model",
+                created = m.created,
+                owned_by = m.owned_by
+            })
+        end
+    end
+
+    local response = {
+        object = "list",
+        data = models
+    }
+
+    core.response.set_header("Content-Type", "application/json")
+    return 200, core.json.encode(response)
+end
+
+function _M.access(conf, ctx)
+    if conf.action == "enforce" then
+        return enforce_chat_model_access(conf, ctx)
+    elseif conf.action == "render" then
+        return render_models_for_group(conf, ctx)
+    end
+end
+
+return _M

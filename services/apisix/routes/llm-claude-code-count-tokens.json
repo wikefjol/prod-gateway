@@ -1,0 +1,44 @@
+{
+  "id": "llm-claude-code-count-tokens",
+  "name": "llm-claude-code-count-tokens",
+  "uri": "/llm/claude-code/v1/messages/count_tokens",
+  "methods": ["POST"],
+  "plugins": {
+    "auth-transform": {
+      "mode": "bearer_to_api_key",
+      "sanitize_request_ids": true
+    },
+    "key-auth": {
+      "header": "x-api-key",
+      "hide_credentials": true
+    },
+    "consumer-restriction": {
+      "type": "consumer_group_id",
+      "whitelist": ["claude_code_users"],
+      "rejected_code": 403,
+      "rejected_msg": "Claude Code sidecar requires claude_code_users membership"
+    },
+    "proxy-rewrite": {
+      "uri": "/v1/messages/count_tokens",
+      "headers": {
+        "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
+        "set": {
+          "x-api-key": "$ANTHROPIC_API_KEY",
+          "anthropic-version": "2023-06-01"
+        }
+      }
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    }
+  },
+  "upstream": {
+    "type": "roundrobin",
+    "scheme": "https",
+    "nodes": {
+      "api.anthropic.com:443": 1
+    },
+    "pass_host": "node"
+  }
+}

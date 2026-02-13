@@ -31,6 +31,7 @@ etcd:
   timeout: 30
 
 plugins:
+  - response-rewrite
   - proxy-rewrite
   - limit-count
   - cors
@@ -49,3 +50,6 @@ plugins:
   - prometheus
   - ai-proxy
   - ai-proxy-multi
+  - provider-response-id
+  - auth-transform
+  - model-policy

@@ -19,7 +19,6 @@ local schema = {
     type = "object",
     properties = {
         enabled = { type = "boolean", default = true },
-        always_capture = { type = "boolean", default = false },
         max_body_bytes = { type = "integer", minimum = 1024, default = 524288 },
         log_path = { type = "string", default = "/usr/local/apisix/logs/wiretap.jsonl" },
     },
@@ -45,17 +44,14 @@ local function is_binary(chunk)
 end
 
 function _M.access(conf, ctx)
-    -- enabled defaults to true if not explicitly set to false
-    if conf.enabled == false then
+    if not conf.enabled then
         return
     end
 
-    -- Gate: skip if not always_capture and no debug header
-    if not conf.always_capture then
-        local debug_header = core.request.header(ctx, "X-Debug-Capture")
-        if debug_header ~= "1" then
-            return
-        end
+    -- Gate: only capture if X-Debug-Capture: 1 header present
+    local debug_header = core.request.header(ctx, "X-Debug-Capture")
+    if debug_header ~= "1" then
+        return
     end
 
     ctx._wiretap_enabled = true

@@ -1,4 +1,8 @@
-FROM apache/apisix:3.14.1-debian
+FROM apache/apisix:3.15.0-debian
+
+ARG GIT_SHA=unknown
+LABEL org.opencontainers.image.revision=$GIT_SHA
+LABEL project=apisix-gateway
 
 # Switch to root to install packages
 USER root
