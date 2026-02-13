@@ -37,6 +37,7 @@ billing-tests/
 tmp_key_file.txt
 gateway-usage-examples.txt
 notes_on_logs.md
+CLEANUP-WORKFLOW.md
 
 # Old structure (to be cleaned)
 old/
