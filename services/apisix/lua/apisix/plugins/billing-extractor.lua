@@ -1,5 +1,6 @@
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
+local sse_parser = require("apisix.core.sse_parser")
 
 local plugin_name = "billing-extractor"
 
@@ -150,36 +151,18 @@ end
 
 -- Process streaming response with SSE parsing
 local function process_streaming_chunk(conf, ctx, chunk, eof)
-    -- Accumulate chunk into buffer
-    ctx._sse_buf = (ctx._sse_buf or "") .. chunk
-
-    -- Find last newline position
-    local last_nl = ctx._sse_buf:match(".*()[\r\n]")
-    if last_nl then
-        -- Process complete portion (up to last newline)
-        local complete = ctx._sse_buf:sub(1, last_nl)
-        -- Keep tail (incomplete line) for next chunk
-        ctx._sse_buf = ctx._sse_buf:sub(last_nl + 1)
-
-        -- Process each line in complete portion
-        for line in complete:gmatch("[^\r\n]+") do
-            process_sse_line(line, ctx)
-        end
+    local function handle_line(line)
+        process_sse_line(line, ctx)
     end
 
-    -- Safety cap on buffer (32KB)
-    if #ctx._sse_buf > 32768 then
-        ctx._sse_buf = ctx._sse_buf:sub(-32768)
+    if chunk and chunk ~= "" then
+        sse_parser.feed_lines(ctx, "_sse_buf", chunk, handle_line)
     end
 
-    -- On EOF: flush remaining buffer (handles streams without trailing newline)
-    if eof and ctx._sse_buf and #ctx._sse_buf > 0 then
-        process_sse_line(ctx._sse_buf, ctx)
-        ctx._sse_buf = ""
-    end
-
-    -- Set usage_present flag on EOF
     if eof then
+        sse_parser.flush_lines(ctx, "_sse_buf", handle_line)
+
+        -- Set usage_present flag on EOF
         if ctx._billing_usage_found then
             ctx.billing_usage_present = "true"
         else
