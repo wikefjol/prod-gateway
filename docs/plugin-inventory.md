@@ -121,7 +121,7 @@ Located at: `services/apisix/lua/apisix/plugins/`
 ---
 
 ### response-wiretap
-**Type**: Proper APISIX plugin (priority: 500)
+**Type**: Proper APISIX plugin (priority: 900)
 **Phase**: body_filter
 
 **Schema**:

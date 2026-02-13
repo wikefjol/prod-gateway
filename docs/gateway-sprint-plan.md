@@ -249,18 +249,13 @@ Extracts `id` field from response body, sets `$provider_response_id` ctx var.
 
 ### CORS Policy (#16)
 
-**Decision**: CORS is **NOT enabled** on `/llm/*` routes.
+**Decision**: CORS **is enabled** on `/llm/ai-proxy/*` and `/llm/litellm/*` routes for browser-based clients (OpenWebUI).
 
-**Rationale**:
-- Primary clients are server-side SDK integrations (OpenAI SDK, Anthropic SDK)
-- Claude Code is a CLI tool, not browser-based
-- Browser-based UIs should proxy through their own backend
-
-**If browser access needed in future**: Add `cors` plugin with:
+**Current configuration**:
 ```json
 "cors": {
-  "allow_origins": "https://your-app.example.com",
-  "allow_methods": "GET,POST,OPTIONS",
+  "allow_origins": "*",
+  "allow_methods": "POST,OPTIONS",
   "allow_headers": "Authorization,Content-Type,X-Request-Id",
   "expose_headers": "X-Request-Id",
   "max_age": 3600
@@ -279,7 +274,7 @@ Extracts `id` field from response body, sets `$provider_response_id` ctx var.
 | `/llm/claude-code/v1/messages/count_tokens` | POST | Token counting |
 
 **No DELETE/PUT**: LLM proxy has no stateful resources to modify.
-**No OPTIONS**: CORS disabled, no preflight needed.
+**OPTIONS**: Enabled for CORS preflight on ai-proxy and litellm routes.
 
 ## Agent Build Order & Communication
 

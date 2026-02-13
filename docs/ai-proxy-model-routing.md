@@ -2,7 +2,7 @@
 
 ## Problem
 
-We have an LLM API gateway (Apache APISIX) that proxies requests to multiple AI providers (OpenAI, Anthropic). We want a **single unified endpoint** (`/ai/v1/chat/completions`) that automatically routes requests to the correct provider based on the model name in the request body.
+We have an LLM API gateway (Apache APISIX) that proxies requests to multiple AI providers (OpenAI, Anthropic). We want a **single unified endpoint** (`/llm/ai-proxy/v1/chat/completions`) that automatically routes requests to the correct provider based on the model name in the request body.
 
 Example: A client sends `{"model": "gpt-4o-mini", ...}` → route to OpenAI. A client sends `{"model": "claude-sonnet-4-20250514", ...}` → route to Anthropic.
 
@@ -16,25 +16,23 @@ Example: A client sends `{"model": "gpt-4o-mini", ...}` → route to OpenAI. A c
 Use APISIX's `vars` route matching with `post_arg.model` to inspect the JSON request body and route based on model name patterns. Create separate routes for each provider, same URI, different `vars` conditions.
 
 ```
-POST /ai/v1/chat/completions {"model": "gpt-4o-mini", ...}
+POST /llm/ai-proxy/v1/chat/completions {"model": "gpt-4o-mini", ...}
                 │
                 ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  APISIX Route Matching (by vars)                            │
 │                                                             │
-│  Route: ai-chat-openai (priority: 10)                       │
-│    uri: /ai/v1/chat/completions                             │
+│  Route: llm-ai-proxy-chat-openai (priority: 10)                       │
+│    uri: /llm/ai-proxy/v1/chat/completions                             │
 │    vars: [["post_arg.model", "~~", "^(gpt|o1|o3|davinci)"]]│
 │    plugins: ai-proxy (provider: openai)                     │
 │                                                             │
-│  Route: ai-chat-anthropic (priority: 10)                    │
-│    uri: /ai/v1/chat/completions                             │
+│  Route: llm-ai-proxy-chat-anthropic (priority: 10)                    │
+│    uri: /llm/ai-proxy/v1/chat/completions                             │
 │    vars: [["post_arg.model", "~~", "^claude"]]             │
 │    plugins: ai-proxy (provider: anthropic)                  │
 │                                                             │
-│  Route: ai-chat-fallback (priority: 1)                      │
-│    uri: /ai/v1/chat/completions                             │
-│    returns 400 "unknown model"                              │
+│  (model-policy plugin rejects unknown models with 400)  │
 └─────────────────────────────────────────────────────────────┘
                 │
                 ▼
@@ -50,7 +48,7 @@ APISIX can match on JSON body fields using `post_arg.<field>`. Available since A
 Multiple routes can have the same URI. APISIX matches the route with highest `priority` value first. If `vars` conditions don't match, it tries the next route.
 
 - Provider routes: priority 10 (checked first)
-- Fallback route: priority 1 (catches unmatched models)
+- Unknown models: rejected by model-policy plugin
 
 ### ai-proxy Plugin
 APISIX's built-in plugin that proxies to a single LLM provider. Handles:
@@ -62,18 +60,19 @@ APISIX's built-in plugin that proxies to a single LLM provider. Handles:
 
 ```
 services/apisix/routes/
-├── ai-chat-openai.json      # Routes gpt-*, o1-*, o3-*, davinci-*, text-embedding-*
-├── ai-chat-anthropic.json   # Routes claude-*
-├── ai-chat-fallback.json    # Returns error for unknown models
-└── ai-models.json           # GET /ai/v1/models - lists available models
+├── llm-ai-proxy-chat-openai.json      # Routes gpt-*, o1-*, o3-*, davinci-*, text-embedding-*
+├── llm-ai-proxy-chat-anthropic.json   # Routes claude-*
+└── llm-ai-proxy-models.json           # GET /llm/ai-proxy/v1/models - model list
 ```
+
+Note: Unknown models are rejected by `model-policy` plugin (no separate fallback route).
 
 ## Route Structure Example
 
 ```json
 {
-  "id": "ai-chat-openai",
-  "uri": "/ai/v1/chat/completions",
+  "id": "llm-ai-proxy-chat-openai",
+  "uri": "/llm/ai-proxy/v1/chat/completions",
   "methods": ["POST"],
   "priority": 10,
   "vars": [["post_arg.model", "~~", "^(gpt|o1|o3|davinci|text-embedding)"]],
@@ -93,32 +92,32 @@ services/apisix/routes/
 2. Set appropriate `vars` regex to match model names
 3. Configure `ai-proxy` with provider name and auth
 4. Add to `PROVIDER_ROUTES` array in `services/apisix/scripts/bootstrap.sh`
-5. Update `ai-models.json` to include new models
+5. Update `llm-ai-proxy-models.json` to include new models
 6. Run `./infra/ctl/ctl.sh bootstrap`
 
 ## Testing
 
 ```bash
 # OpenAI model
-curl -X POST localhost:9080/ai/v1/chat/completions \
+curl -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}'
 
 # Anthropic model (returns OpenAI-format response via ai-proxy)
-curl -X POST localhost:9080/ai/v1/chat/completions \
+curl -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-sonnet-4-20250514","messages":[{"role":"user","content":"hi"}]}'
 
 # Unknown model (returns 400)
-curl -X POST localhost:9080/ai/v1/chat/completions \
+curl -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"unknown-model","messages":[{"role":"user","content":"hi"}]}'
 
 # List available models
-curl localhost:9080/ai/v1/models -H "Authorization: Bearer $API_KEY"
+curl localhost:9080/llm/ai-proxy/v1/models -H "Authorization: Bearer $API_KEY"
 ```
 
 ## Related

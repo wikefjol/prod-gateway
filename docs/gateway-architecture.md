@@ -296,27 +296,18 @@ return M
 
 ## 4. Current Route Layout
 
-**Question**: Which endpoints exist under `/ai/v1/*`? Any aliases?
+**Question**: Which endpoints exist under `/llm/*`?
 
-### Unified AI Endpoints (OpenAI-compatible)
+### LLM API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/ai/v1/chat/completions` | POST | Model-routed to OpenAI or Anthropic |
-| `/ai/v1/models` | GET | Static list of available models |
-
-### Provider-Native Endpoints
-
-| Endpoint | Provider | Description |
-|----------|----------|-------------|
-| `/provider/openai/v1/chat/completions` | OpenAI | Direct passthrough |
-| `/provider/openai/v1/models` | OpenAI | Direct passthrough |
-| `/provider/openai/v1/responses` | OpenAI | Responses API |
-| `/provider/anthropic/v1/messages` | Anthropic | Native Messages API |
-| `/provider/anthropic/v1/messages/count_tokens` | Anthropic | Token counting |
-| `/provider/anthropic/v1/models` | Anthropic | Model list |
-| `/provider/anthropic/openai/v1/*` | Anthropic | OpenAI-compat via ai-proxy |
-| `/provider/litellm/*` | LiteLLM | Passthrough to LiteLLM service |
+| `/llm/ai-proxy/v1/chat/completions` | POST | Model-routed to OpenAI or Anthropic via ai-proxy |
+| `/llm/ai-proxy/v1/models` | GET | Model list filtered by consumer group |
+| `/llm/litellm/v1/chat/completions` | POST | Proxied to LiteLLM service |
+| `/llm/litellm/v1/models` | GET | Model list from LiteLLM |
+| `/llm/claude-code/v1/messages` | POST | Native Anthropic Messages API |
+| `/llm/claude-code/v1/messages/count_tokens` | POST | Token counting |
 
 ### Other Routes
 
@@ -324,31 +315,21 @@ return M
 |----------|-------------|
 | `/health` | Health check |
 | `/portal`, `/portal/*` | Portal UI (OIDC-protected) |
-| `/openwebui/central/v1/*` | OpenWebUI central instance |
-| `/openwebui/direct/v1/*` | OpenWebUI direct instance |
-
-**Aliases**: No `/v1/*` aliases exist. All AI endpoints are under `/ai/v1/*`.
+| `/` | Redirect to portal |
 
 **All route files**: `services/apisix/routes/`
 
 ```
-ai-chat-anthropic.json
-ai-chat-fallback.json
-ai-chat-openai.json
-ai-models.json
 health-route.json
+llm-ai-proxy-chat-anthropic.json
+llm-ai-proxy-chat-openai.json
+llm-ai-proxy-models.json
+llm-claude-code-count-tokens.json
+llm-claude-code-messages.json
+llm-litellm-chat.json
+llm-litellm-models.json
 oidc-generic-route.json
-openwebui-central.json
-openwebui-direct.json
 portal-redirect-route.json
-provider-anthropic-count-tokens.json
-provider-anthropic-messages.json
-provider-anthropic-models.json
-provider-anthropic-openai.json
-provider-litellm.json
-provider-openai-chat.json
-provider-openai-models.json
-provider-openai-responses.json
 root-redirect-route.json
 ```
 
@@ -367,56 +348,51 @@ root-redirect-route.json
 **How it works**:
 
 ```
-POST /ai/v1/chat/completions {"model": "gpt-4o-mini", ...}
+POST /llm/ai-proxy/v1/chat/completions {"model": "gpt-4o-mini", ...}
         │
         ▼
-┌───────────────────────────────────────────────────────┐
-│  Route: ai-chat-openai (priority: 10)                 │
-│  vars: [["post_arg.model", "~~", "^(gpt|o1|o3|...)"]]│
-│  → MATCHES → ai-proxy (openai)                        │
-└───────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Route: llm-ai-proxy-chat-openai (priority: 10)             │
+│  vars: [["post_arg.model", "~~", "^(gpt|o1|o3|...)"]]      │
+│  → MATCHES → ai-proxy (openai)                              │
+└─────────────────────────────────────────────────────────────┘
 
-POST /ai/v1/chat/completions {"model": "claude-sonnet-4", ...}
+POST /llm/ai-proxy/v1/chat/completions {"model": "claude-sonnet-4", ...}
         │
         ▼
-┌───────────────────────────────────────────────────────┐
-│  Route: ai-chat-openai (priority: 10)                 │
-│  vars: [["post_arg.model", "~~", "^(gpt|o1|o3|...)"]]│
-│  → NO MATCH                                           │
-│                                                       │
-│  Route: ai-chat-anthropic (priority: 10)              │
-│  vars: [["post_arg.model", "~~", "^claude"]]         │
-│  → MATCHES → ai-proxy (anthropic)                     │
-└───────────────────────────────────────────────────────┘
-
-POST /ai/v1/chat/completions {"model": "unknown-xyz", ...}
-        │
-        ▼
-┌───────────────────────────────────────────────────────┐
-│  Route: ai-chat-fallback (priority: 1)                │
-│  No vars (catches all)                                │
-│  → Returns 400 "Unknown model"                        │
-└───────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Route: llm-ai-proxy-chat-openai (priority: 10)             │
+│  vars: [["post_arg.model", "~~", "^(gpt|o1|o3|...)"]]      │
+│  → NO MATCH                                                 │
+│                                                             │
+│  Route: llm-ai-proxy-chat-anthropic (priority: 10)          │
+│  vars: [["post_arg.model", "~~", "^claude"]]               │
+│  → MATCHES → ai-proxy (anthropic)                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Route example** (`ai-chat-openai.json`):
+Unknown models are rejected by model-policy plugin (returns 400).
+
+**Route example** (`llm-ai-proxy-chat-openai.json`):
 
 ```json
 {
-  "id": "ai-chat-openai",
-  "uri": "/ai/v1/chat/completions",
-  "methods": ["POST"],
+  "id": "llm-ai-proxy-chat-openai",
+  "uri": "/llm/ai-proxy/v1/chat/completions",
+  "methods": ["POST", "OPTIONS"],
   "priority": 10,
   "vars": [["post_arg.model", "~~", "^(gpt|o1|o3|davinci|text-embedding)"]],
   "plugins": {
+    "cors": { ... },
+    "auth-transform": { "mode": "bearer_to_api_key" },
+    "openai-auth": { "header": "x-api-key" },
+    "model-policy": { "action": "enforce" },
     "ai-proxy": {
       "provider": "openai",
-      "auth": {
-        "header": {
-          "Authorization": "Bearer $OPENAI_API_KEY"
-        }
-      }
-    }
+      "auth": { "header": { "Authorization": "Bearer $OPENAI_API_KEY" } }
+    },
+    "provider-response-id": {},
+    "file-logger": { ... }
   }
 }
 ```
@@ -512,20 +488,20 @@ POST /ai/v1/chat/completions {"model": "unknown-xyz", ...}
 
 **Answer**:
 
-- **Status**: Verified working for both OpenAI and Anthropic via `/ai/v1/chat/completions`
+- **Status**: Verified working for both OpenAI and Anthropic via `/llm/ai-proxy/v1/chat/completions`
 - **Buffering issues**: None currently known
 
 **Test commands**:
 
 ```bash
 # OpenAI streaming
-curl -N -X POST localhost:9080/ai/v1/chat/completions \
+curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'
 
 # Anthropic streaming (returns OpenAI-format SSE)
-curl -N -X POST localhost:9080/ai/v1/chat/completions \
+curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'
@@ -537,49 +513,31 @@ curl -N -X POST localhost:9080/ai/v1/chat/completions \
 
 ## 9. /models Current Behavior
 
-**Question**: What does `/ai/v1/models` return? Is it filtered by consumer/group?
+**Question**: What does `/llm/ai-proxy/v1/models` return? Is it filtered by consumer/group?
 
 **Answer**:
 
-- **Implementation**: Static JSON returned via `serverless-post-function`
-- **Filtering**: None. All consumers see the same model list.
+- **Implementation**: Dynamic model list via `model-policy` plugin with `action=render`
+- **Filtering**: Yes. Consumer group determines which models are visible.
 - **Format**: OpenAI-compatible `/v1/models` response
 
-**Route** (`ai-models.json`):
+**Route** (`llm-ai-proxy-models.json`):
 
 ```json
 {
-  "id": "ai-models",
-  "uri": "/ai/v1/models",
-  "methods": ["GET"],
+  "id": "llm-ai-proxy-models",
+  "uri": "/llm/ai-proxy/v1/models",
+  "methods": ["GET", "OPTIONS"],
   "plugins": {
-    "key-auth": { "header": "x-api-key", "hide_credentials": true },
-    "serverless-post-function": {
-      "phase": "access",
-      "functions": [
-        "return function() ngx.header['Content-Type'] = 'application/json' ngx.say('{\"object\":\"list\",\"data\":[{\"id\":\"gpt-4o\",\"object\":\"model\",\"owned_by\":\"openai\"},{\"id\":\"gpt-4o-mini\",\"object\":\"model\",\"owned_by\":\"openai\"},...]}') ngx.exit(200) end"
-      ]
-    }
+    "cors": { ... },
+    "auth-transform": { ... },
+    "openai-auth": { ... },
+    "model-policy": { "action": "render" }
   }
 }
 ```
 
-**Current model list**:
-
-| Model ID | Provider |
-|----------|----------|
-| gpt-4o | openai |
-| gpt-4o-mini | openai |
-| gpt-4-turbo | openai |
-| o1 | openai |
-| o1-mini | openai |
-| o3-mini | openai |
-| claude-sonnet-4-20250514 | anthropic |
-| claude-3-5-sonnet-20241022 | anthropic |
-| claude-3-5-haiku-20241022 | anthropic |
-| claude-3-opus-20240229 | anthropic |
-
-**Future work**: Consumer-group-based model filtering is not yet implemented.
+Model list is defined in `model-policy.lua` (MODEL_REGISTRY) and filtered by consumer group.
 
 ---
 
@@ -608,11 +566,14 @@ CORE_ROUTES=(
   ...
 )
 
-PROVIDER_ROUTES=(
-  "provider-openai-chat.json"
-  "ai-chat-openai.json"
-  "ai-chat-anthropic.json"
-  ...
+LLM_ROUTES=(
+  "llm-ai-proxy-chat-openai.json"
+  "llm-ai-proxy-chat-anthropic.json"
+  "llm-ai-proxy-models.json"
+  "llm-litellm-chat.json"
+  "llm-litellm-models.json"
+  "llm-claude-code-messages.json"
+  "llm-claude-code-count-tokens.json"
 )
 ```
 
@@ -628,7 +589,7 @@ PROVIDER_ROUTES=(
 
 ### Adding New Policy Data
 
-**Option A: Static in route JSON** (current approach for `/ai/v1/models`)
+**Option A: Static in route JSON**
 - Pros: Simple, no extra files
 - Cons: Hard to maintain, no filtering
 
@@ -657,10 +618,11 @@ services/apisix/
 ├── config.yaml               # APISIX config (plugins list, admin keys)
 ├── entrypoint-simple.sh      # Container entrypoint
 ├── routes/                   # Route JSON files
-│   ├── ai-chat-openai.json
-│   ├── ai-chat-anthropic.json
-│   ├── ai-chat-fallback.json
-│   ├── ai-models.json
+│   ├── llm-ai-proxy-chat-openai.json
+│   ├── llm-ai-proxy-chat-anthropic.json
+│   ├── llm-ai-proxy-models.json
+│   ├── llm-litellm-*.json
+│   ├── llm-claude-code-*.json
 │   └── ...
 ├── consumer-groups/          # Consumer group JSON files
 │   ├── base-user-group.json

@@ -145,7 +145,7 @@ curl -X POST https://gateway/llm/claude-code/v1/messages/count_tokens \
 
 | Group | Models | Rate Limit |
 |-------|--------|------------|
-| `base_user` | gpt-4o-mini, gpt-3.5-turbo, claude-3-5-haiku-20241022, claude-3-haiku-20240307 | 10k/week |
+| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-3-5-haiku-20241022, claude-3-haiku-20240307 | 10k/week |
 | `premium_user` | All models | 10k/week |
 | `claude_code_users` | All models + Claude Code sidecar access | 10k/week |
 
@@ -154,7 +154,7 @@ curl -X POST https://gateway/llm/claude-code/v1/messages/count_tokens \
 ### OpenAI
 - gpt-4o, gpt-4o-mini
 - gpt-4-turbo, gpt-4
-- gpt-3.5-turbo
+- gpt-3.5-turbo-0125
 - o1, o1-mini, o1-preview
 - o3-mini
 
