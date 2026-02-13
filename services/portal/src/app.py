@@ -37,10 +37,12 @@ DEV_MODE = os.getenv('DEV_MODE', 'false').lower() == 'true'
 DEV_ADMIN_PASSWORD = os.getenv('DEV_ADMIN_PASSWORD', '')
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'dev')
 
-# Production safety lockout
-if DEV_MODE and ENVIRONMENT in ['production', 'prod', 'live']:
-    logger.error("SECURITY LOCKOUT: DEV_MODE cannot be enabled in production environment")
-    raise ValueError("DEV_MODE is forbidden in production environment")
+# Environment allowlist for DEV_MODE (blocklist pattern was insufficient)
+ALLOWED_DEV_ENVIRONMENTS = ['local', 'development', 'dev', 'test']
+
+if DEV_MODE and ENVIRONMENT not in ALLOWED_DEV_ENVIRONMENTS:
+    logger.error(f"SECURITY LOCKOUT: DEV_MODE blocked in '{ENVIRONMENT}' (allowed: {ALLOWED_DEV_ENVIRONMENTS})")
+    raise ValueError(f"DEV_MODE only allowed in: {ALLOWED_DEV_ENVIRONMENTS}")
 
 if DEV_MODE:
     if not DEV_ADMIN_PASSWORD:
