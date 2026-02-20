@@ -6,85 +6,7 @@ This document describes the current state of the LLM API Gateway built on Apache
 
 ## Architecture Overview
 
-#### Request Flow
-
-```mermaid
----
-config:
-  flowchart:
-    nodeSpacing: 20
-    rankSpacing: 40
----
-flowchart LR
-    subgraph Clients[" "]
-        direction TB
-        SDK[OpenAI SDK]
-        CC[Claude Code]
-        WebUI[Open WebUI]
-    end
-
-    subgraph Auth["Auth"]
-        direction TB
-        AT[auth-transform]
-        KA[key-auth]
-    end
-
-    subgraph Routes["Route Plugins"]
-        direction TB
-        MP["model-policy<br/>(ai-proxy)"]
-        PR["proxy-rewrite<br/>(litellm)"]
-        CR["consumer-restriction<br/>(claude-code)"]
-    end
-
-    subgraph Upstreams[" "]
-        direction TB
-        OAI[api.openai.com]
-        ANT[api.anthropic.com]
-        LLM[LiteLLM Service]
-    end
-
-    Clients --> AT --> KA
-    KA --> MP & PR & CR
-    MP -->|"ai-proxy"| OAI & ANT
-    PR --> LLM
-    CR --> ANT
-    LLM -.-> OAI & ANT
-```
-
-#### Response Flow
-
-```mermaid
----
-config:
-  flowchart:
-    nodeSpacing: 20
-    rankSpacing: 40
----
-flowchart RL
-    subgraph Upstreams[" "]
-        direction TB
-        OAI[api.openai.com]
-        ANT[api.anthropic.com]
-        LLM[LiteLLM Service]
-    end
-
-    subgraph Resp["Response Plugins"]
-        direction TB
-        PRID["provider-response-id<br/>(ai-proxy)"]
-        BE_PR["billing-extractor →<br/>provider-response-id<br/>(litellm)"]
-        BE["billing-extractor<br/>(claude-code)"]
-    end
-
-    FL[file-logger]
-    LOGS[("logs/billing/")]
-    Clients["Clients"]
-
-    OAI & ANT --> PRID
-    LLM --> BE_PR
-    ANT --> BE
-    PRID & BE_PR & BE --> FL --> LOGS
-    FL --> Clients
-```
+See [diagrams.md](diagrams.md) for visual request/response flow diagrams.
 
 ### Routing Paths
 
@@ -255,8 +177,8 @@ return M
 
 | Group ID | Weekly Quota | Purpose |
 |----------|--------------|---------|
-| `base_user` | 10,000 requests | Default tier |
-| `premium_user` | 100,000 requests | Elevated tier |
+| `base_user` | 1,000,000 requests | Default tier |
+| `premium_user` | 1,000,000 requests | Elevated tier |
 
 **Example** (`base-user-group.json`):
 
@@ -265,7 +187,7 @@ return M
   "id": "base_user",
   "plugins": {
     "limit-count": {
-      "count": 10000,
+      "count": 1000000,
       "time_window": 604800,
       "rejected_code": 429,
       "rejected_msg": "Weekly quota exceeded. Limit resets every 7 days. Contact admin for upgrade.",

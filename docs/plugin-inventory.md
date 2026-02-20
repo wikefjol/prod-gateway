@@ -170,11 +170,11 @@ Located at: `services/apisix/lua/apisix/plugins/`
 | auth-transform | Yes | Yes | Yes |
 | openai-auth | Yes | Yes | No |
 | key-auth | No | No | Yes |
-| model-policy | Yes | Yes | No |
+| model-policy | Yes | No | No |
 | ai-proxy | Yes | No | No |
 | proxy-rewrite | No | Yes | Yes |
 | billing-extractor | No | Yes | Yes |
-| provider-response-id | Yes | No | No |
+| provider-response-id | Yes | Yes | No |
 | file-logger | Yes | Yes | Yes |
 | request-id | Yes | Yes | Yes |
 
