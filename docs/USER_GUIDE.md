@@ -106,8 +106,8 @@ curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
 
 | Tier | Requests/Week |
 |------|---------------|
-| Base | 10,000 |
-| Premium | 50,000 |
+| Base | 1,000,000 |
+| Premium | 1,000,000 |
 
 Monitor usage via response headers:
 - `X-RateLimit-Limit` - your quota

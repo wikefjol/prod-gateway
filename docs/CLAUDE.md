@@ -16,21 +16,16 @@ LLM API Gateway built on Apache APISIX. Proxies requests to Anthropic, OpenAI, a
 # RECOMMENDED: Build + start + bootstrap + verify revision
 ./infra/ctl/ctl.sh dev
 
-# Force clean rebuild (cache-bust)
-./infra/ctl/ctl.sh dev --no-cache
-
-# Include portal service
-./infra/ctl/ctl.sh dev --with-portal
-
-# Fresh etcd state (requires typing DELETE)
-./infra/ctl/ctl.sh dev --nuke
+# Fresh etcd state (removes volume, requires typing DELETE)
+./infra/ctl/ctl.sh up --clean
 
 # Other commands
 ./infra/ctl/ctl.sh down              # Stop gateway
+./infra/ctl/ctl.sh down --clean      # Stop + remove all volumes
 ./infra/ctl/ctl.sh logs -f           # Follow logs
 ./infra/ctl/ctl.sh routes            # List routes from Admin API
 ./infra/ctl/ctl.sh bootstrap         # Load routes (additive)
-./infra/ctl/ctl.sh status            # Check status
+./infra/ctl/ctl.sh bootstrap --clean # Delete all routes first, then load
 ./infra/ctl/ctl.sh shell             # Shell into apisix container
 ```
 

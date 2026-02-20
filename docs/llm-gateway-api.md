@@ -145,21 +145,23 @@ curl -X POST https://gateway/llm/claude-code/v1/messages/count_tokens \
 
 | Group | Models | Rate Limit |
 |-------|--------|------------|
-| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-3-5-haiku-20241022, claude-3-haiku-20240307 | 10k/week |
-| `premium_user` | All models | 10k/week |
-| `claude_code_users` | All models + Claude Code sidecar access | 10k/week |
+| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-3-5-haiku-20241022, claude-3-haiku-20240307 | 1M/week |
+| `premium_user` | All models | 1M/week |
+| `claude_code_users` | All models + Claude Code sidecar access | 1M/week |
 
 ## Available Models
 
 ### OpenAI
 - gpt-4o, gpt-4o-mini
 - gpt-4-turbo, gpt-4
+- gpt-4.1-2025-04-14
 - gpt-3.5-turbo-0125
 - o1, o1-mini, o1-preview
-- o3-mini
+- o3-mini, o3-mini-2025-01-31
 
 ### Anthropic
 - claude-sonnet-4-20250514, claude-opus-4-20250514
+- claude-sonnet-4-5, claude-opus-4-5, claude-haiku-4-5
 - claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022
 - claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
 
