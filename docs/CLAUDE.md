@@ -141,7 +141,7 @@ If implementation deviates from common patterns (e.g., unusual folder structure,
 
 ## Current Focus
 - **Active:** (none)
-- **Last completed:** Issue triage and dependency mapping (Feb 2025)
+- **Last completed:** #46 portal route review → ADR-004 (Feb 2025)
 
 ## Issue Dependencies (Feb 2025)
 
@@ -154,4 +154,4 @@ If implementation deviates from common patterns (e.g., unusual folder structure,
 #38 Firewall audit ──► #39 SWAG migration (informs urgency)
 ```
 
-**No blockers:** #37, #38, #41, #46, #47, #48
+**No blockers:** #37, #38, #41, #47, #48
