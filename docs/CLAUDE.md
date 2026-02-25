@@ -108,3 +108,37 @@ utils/
 - 9080: Gateway (public)
 - 9180: Admin API (localhost only)
 - 3001: Portal (localhost only)
+
+## Work Routine
+
+### Picking up work
+1. Check "Current focus" below for active work
+2. Review issue dependencies (see Issue Dependencies section)
+3. Read relevant ADRs in `/docs/adr/` if touching that area
+4. If something looks unconventional, check for an ADR - if none exists, flag it
+
+### During work
+1. Update "Current focus" when starting an issue
+2. Document decisions in issue comments as you go
+3. For significant/architectural decisions: create ADR before implementing
+4. Update "Last completed" when done
+
+### Deviation check
+If implementation deviates from common patterns (e.g., unusual folder structure, non-standard tooling, custom solution over established library), an ADR MUST exist explaining why. No ADR = assume drift, discuss before proceeding.
+
+## Current Focus
+- **Active:** (none)
+- **Last completed:** Issue triage and dependency mapping (Feb 2025)
+
+## Issue Dependencies (Feb 2025)
+
+```
+#41 Entra app ──► #40 OpenWebUI install ──► #42 Workspace explore
+
+#43 Consumer group matrix ─┬─► #44 Promotion script
+                           └─► #45 Privilege scripts
+
+#38 Firewall audit ──► #39 SWAG migration (informs urgency)
+```
+
+**No blockers:** #37, #38, #41, #46, #47, #48
