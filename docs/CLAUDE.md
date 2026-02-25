@@ -50,8 +50,12 @@ services/
 │   ├── plugin-metadata/*.json
 │   ├── scripts/bootstrap.sh
 │   └── lua/apisix/plugins/
+│       ├── auth-transform.lua
 │       ├── billing-extractor.lua
-│       └── auth-transform.lua
+│       ├── model-policy.lua
+│       ├── openai-auth.lua
+│       ├── provider-response-id.lua
+│       └── response-wiretap.lua
 ├── portal/
 │   ├── compose.yaml
 │   ├── Dockerfile
@@ -97,11 +101,20 @@ utils/
 
 ## Key Files
 
+- `services/apisix/lua/apisix/plugins/auth-transform.lua` - Bearer → X-Api-Key transformation
+- `services/apisix/lua/apisix/plugins/model-policy.lua` - Model registry + per-group access control
 - `services/apisix/lua/apisix/plugins/billing-extractor.lua` - SSE streaming parser, usage extraction
-- `services/apisix/routes/llm-claude-code-messages.json` - Example route with full plugin chain
+- `services/apisix/lua/apisix/plugins/provider-response-id.lua` - Extract provider response ID from stream
+- `services/apisix/routes/llm-ai-proxy-chat-openai.json` - Example route with full plugin chain
 - `services/portal/src/app.py` - Portal backend (Consumer/credential management)
 - `services/apisix/scripts/bootstrap.sh` - Route/consumer-group loader
 - `infra/ctl/ctl.sh` - Unified control script
+
+## Further Reading
+
+- `/docs/adr/` - Architectural Decision Records (read before making changes)
+- `/docs/gateway-architecture.md` - Detailed architecture reference
+- GitHub Issues: https://github.com/wikefjol/prod-gateway/issues
 
 ## Ports (Dev)
 
