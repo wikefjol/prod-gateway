@@ -73,7 +73,13 @@ utils/
 
 **Network:** All services use external network `${CORE_NET}` (apisix-dev or apisix-test).
 
-**Request flow:** Client → APISIX (auth-transform → key-auth → proxy-rewrite → billing-extractor → kafka-logger) → Upstream
+**Request flow:** Client → Apache2 → APISIX (auth-transform → key-auth → proxy-rewrite → billing-extractor → kafka-logger) → Upstream
+
+**Apache reverse proxy:** `/etc/apache2/sites-available/ai-gateway-portal-chalmers.conf` (system-level, outside repo)
+
+**Host:** Lamassu (production machine)
+
+**Local vLLM:** `alvis-worker1.c3se.chalmers.se`, `alvis-worker2.c3se.chalmers.se` (see email from Mikael Öhman for details)
 
 **Config loading:** `bootstrap.sh` PUTs consumer-groups, plugin-metadata, routes to APISIX Admin API using envsubst.
 

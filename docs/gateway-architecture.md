@@ -8,6 +8,8 @@ This document describes the current state of the LLM API Gateway built on Apache
 
 See [diagrams.md](diagrams.md) for visual request/response flow diagrams.
 
+**Apache reverse proxy:** System-level Apache2 sits in front of APISIX. Config at `/etc/apache2/sites-available/ai-gateway-portal-chalmers.conf`.
+
 ### Routing Paths
 
 | Path | Route | Plugins | Upstream | TTFT Overhead |
