@@ -13,7 +13,7 @@ Consolidate to 5 docs + diagrams dir + ADRs. Apply "one fact, one place" princip
 
 **Kept:**
 - `README.md` — quick start, endpoint table, project structure
-- `docs/CLAUDE.md` — agent onboarding, dev workflow, doc policy
+- `CLAUDE.md` — agent onboarding, dev workflow, doc policy
 - `docs/USER_GUIDE.md` — user-facing API reference (merged from llm-gateway-api.md)
 - `docs/gateway-architecture.md` — architecture reference (rewritten ~150 lines)
 - `docs/adr/` — architectural decisions
