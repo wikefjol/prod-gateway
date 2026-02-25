@@ -15,10 +15,6 @@ local MODEL_REGISTRY = {
     { id = "o1-mini", provider = "openai", owned_by = "system", created = 1725926400 },
     { id = "o1-preview", provider = "openai", owned_by = "system", created = 1725926400 },
     { id = "o3-mini", provider = "openai", owned_by = "system", created = 1738195200 },
-    { id = "claude-3-5-sonnet-20241022", provider = "anthropic", owned_by = "anthropic", created = 1729555200 },
-    { id = "claude-3-5-haiku-20241022", provider = "anthropic", owned_by = "anthropic", created = 1729555200 },
-    { id = "claude-3-opus-20240229", provider = "anthropic", owned_by = "anthropic", created = 1709164800 },
-    { id = "claude-3-sonnet-20240229", provider = "anthropic", owned_by = "anthropic", created = 1709164800 },
     { id = "claude-3-haiku-20240307", provider = "anthropic", owned_by = "anthropic", created = 1709769600 },
     { id = "claude-sonnet-4-20250514", provider = "anthropic", owned_by = "anthropic", created = 1747180800 },
     { id = "claude-opus-4-20250514", provider = "anthropic", owned_by = "anthropic", created = 1747180800 },
@@ -36,8 +32,8 @@ local ALLOWED_MODELS_BY_GROUP = {
     base_user = {
         "gpt-4o-mini",
         "gpt-3.5-turbo-0125",
-        "claude-3-5-haiku-20241022",
         "claude-3-haiku-20240307",
+        "claude-haiku-4-5",
     },
     premium_user = "*",  -- All models
     claude_code_users = "*",  -- For sidecar
