@@ -1,3 +1,10 @@
+-- response-wiretap
+-- Purpose: Debug capture — writes full request+response to JSONL file
+-- Phase: access (capture request), body_filter (accumulate response), log (write file)
+-- Priority: 900
+-- Schema: { enabled: bool, always_capture: bool, max_body_bytes: int, log_path: str }
+-- Ctx vars set: none
+
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 local ngx_encode_base64 = ngx.encode_base64

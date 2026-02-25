@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 LLM API Gateway built on Apache APISIX. Proxies requests to Anthropic and OpenAI with:
 - Per-consumer API key auth (key-auth plugin + Bearer token transformation)
 - Rate limiting (per-route burst + per-consumer-group quotas)
-- Billing data extraction (custom billing-extractor Lua plugin → kafka-logger)
+- Billing data extraction (custom billing-extractor Lua plugin → file-logger)
 - Self-service key management portal (Flask)
 
 ## Development Commands
@@ -41,7 +41,7 @@ curl -sI http://localhost:9080/health | grep X-Gateway-Revision
 ```
 services/
 ├── apisix/
-│   ├── compose.yaml      # includes etcd service
+│   ├── compose.yaml
 │   ├── Dockerfile
 │   ├── config.yaml
 │   ├── entrypoint-simple.sh
@@ -55,7 +55,8 @@ services/
 │       ├── model-policy.lua
 │       ├── openai-auth.lua
 │       ├── provider-response-id.lua
-│       └── response-wiretap.lua
+│       ├── response-wiretap.lua
+│       └── stream-usage-injector.lua  (INACTIVE — not in config.yaml)
 ├── portal/
 │   ├── compose.yaml
 │   ├── Dockerfile
@@ -71,13 +72,20 @@ infra/
 └── ctl/
     └── ctl.sh
 
-utils/
-└── billing-test.sh
+docs/
+├── CLAUDE.md
+├── USER_GUIDE.md
+├── gateway-architecture.md
+├── adr/
+└── diagrams/
+    ├── request-flow.md
+    ├── response-flow.md
+    └── model-routing.md
 ```
 
 **Network:** All services use external network `${CORE_NET}` (apisix-dev or apisix-test).
 
-**Request flow:** Client → Apache2 → APISIX (auth-transform → key-auth → proxy-rewrite → billing-extractor → kafka-logger) → Upstream
+**Request flow:** Client → Apache2 → APISIX (auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id → file-logger) → Upstream
 
 **Apache reverse proxy:** `/etc/apache2/sites-available/ai-gateway-portal-chalmers.conf` (system-level, outside repo)
 
@@ -113,7 +121,7 @@ utils/
 ## Further Reading
 
 - `/docs/adr/` - Architectural Decision Records (read before making changes)
-- `/docs/gateway-architecture.md` - Detailed architecture reference
+- `/docs/gateway-architecture.md` - Architecture reference
 - GitHub Issues: https://github.com/wikefjol/prod-gateway/issues
 
 ## Ports (Dev)
@@ -134,26 +142,47 @@ utils/
 1. Update "Current focus" when starting an issue
 2. Document decisions in issue comments as you go
 3. For significant/architectural decisions: create ADR before implementing
-4. If routes, plugins, or endpoints change: update docs that list them (see Doc Sync Checklist)
+4. If routes, plugins, or endpoints change: follow Documentation Policy below
 5. Update "Last completed" when done
 
 ### Deviation check
 If implementation deviates from common patterns (e.g., unusual folder structure, non-standard tooling, custom solution over established library), an ADR MUST exist explaining why. No ADR = assume drift, discuss before proceeding.
 
-## Doc Sync Checklist
+## Documentation Policy
 
-When routes, endpoints, or plugins change, update:
-- `README.md` — endpoint table, project structure
-- `routes.txt` — URL inventory
-- `docs/llm-gateway-api.md` — endpoint docs + examples
-- `docs/gateway-architecture.md` — route tables, file listings, bootstrap snippets
-- `docs/USER_GUIDE.md` — endpoint table, provider comparison
-- `docs/plugin-inventory.md` — plugin matrix
-- `docs/diagrams.md` — mermaid diagrams
+See [ADR-005](adr/005-documentation-strategy.md) for rationale.
+
+**One fact, one place:**
+- Model lists → `model-policy.lua` MODEL_REGISTRY only
+- Plugin config/purpose → Lua file header comment only
+- Route config → JSON files only
+- Docs reference these; never restate them
+
+**Maintained docs and their audience:**
+
+| File | Audience |
+|------|----------|
+| `README.md` | Anyone — quick start, endpoint table |
+| `docs/USER_GUIDE.md` | End users — API usage, auth, examples |
+| `docs/gateway-architecture.md` | Developers — auth, routing, billing internals |
+| `docs/CLAUDE.md` | Agents — dev workflow, conventions |
+| `docs/adr/` | Developers — architectural decisions |
+| `docs/diagrams/` | Anyone — visual flows (one file per diagram) |
+
+**When routes/plugins change, update:**
+- `README.md` endpoint table — if public-facing endpoints change
+- `docs/USER_GUIDE.md` — if user-facing behavior changes
+- `docs/gateway-architecture.md` — if routing/auth/billing architecture changes
+- `docs/diagrams/` — if request/response flow or model routing changes
+- Lua file header comment — if plugin purpose/phase/schema changes
+
+**Plugin changes:** Update the header comment block at the top of the Lua file.
+
+**Diagrams:** One diagram per file in `docs/diagrams/`. Update when route structure or plugin flow changes.
 
 ## Current Focus
-- **Active:** #47 archive litellm routes
-- **Last completed:** #49 portal chat test broken → deprecated Anthropic models (Feb 2026)
+- **Active:** #50 documentation consolidation
+- **Last completed:** #47 archive litellm routes (Feb 2026)
 
 ## Issue Dependencies (Feb 2025)
 
@@ -166,4 +195,4 @@ When routes, endpoints, or plugins change, update:
 #38 Firewall audit ──► #39 SWAG migration (informs urgency)
 ```
 
-**No blockers:** #37, #38, #41, #47, #48
+**No blockers:** #37, #38, #41, #48

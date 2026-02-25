@@ -1,3 +1,12 @@
+-- billing-extractor
+-- Purpose: Parse SSE streaming responses to extract token usage and provider response ID for billing logs
+-- Phase: access (capture ctx), body_filter (parse response body)
+-- Priority: 1000
+-- Schema: { max_resp_body_bytes: int, provider: "anthropic"|"openai"|"litellm", endpoint: str }
+-- Ctx vars set: billing_model, billing_provider_response_id, billing_usage_json, billing_provider,
+--               billing_endpoint, billing_is_streaming, billing_usage_present,
+--               llm_model, llm_prompt_tokens, llm_completion_tokens, request_llm_model
+
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 local sse_parser = require("apisix.core.sse_parser")
