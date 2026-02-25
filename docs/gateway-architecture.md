@@ -15,7 +15,6 @@ See [diagrams.md](diagrams.md) for visual request/response flow diagrams.
 | Path | Route | Plugins | Upstream | TTFT Overhead |
 |------|-------|---------|----------|---------------|
 | **ai-proxy** | `/llm/ai-proxy/v1/*` | model-policy → ai-proxy → provider-response-id | Direct to OpenAI/Anthropic | ~2% |
-| **litellm** | `/llm/litellm/v1/*` | proxy-rewrite → billing-extractor → provider-response-id | LiteLLM server | ~3x |
 | **claude-code** | `/llm/claude-code/v1/*` | consumer-restriction → billing-extractor | Direct to Anthropic | ~10% |
 
 ### Billing Log Schema (Unified)
@@ -228,8 +227,6 @@ return M
 |----------|--------|-------------|
 | `/llm/ai-proxy/v1/chat/completions` | POST | Model-routed to OpenAI or Anthropic via ai-proxy |
 | `/llm/ai-proxy/v1/models` | GET | Model list filtered by consumer group |
-| `/llm/litellm/v1/chat/completions` | POST | Proxied to LiteLLM service |
-| `/llm/litellm/v1/models` | GET | Model list from LiteLLM |
 | `/llm/claude-code/v1/messages` | POST | Native Anthropic Messages API |
 | `/llm/claude-code/v1/messages/count_tokens` | POST | Token counting |
 
@@ -250,8 +247,6 @@ llm-ai-proxy-chat-openai.json
 llm-ai-proxy-models.json
 llm-claude-code-count-tokens.json
 llm-claude-code-messages.json
-llm-litellm-chat.json
-llm-litellm-models.json
 oidc-generic-route.json
 portal-redirect-route.json
 root-redirect-route.json
@@ -428,7 +423,7 @@ curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
 curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"claude-3-5-haiku-20241022","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'
+  -d '{"model":"claude-haiku-4-5","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'
 ```
 
 **Expected output**: SSE stream with `data: {...}` chunks, ending with `data: [DONE]`.
@@ -494,8 +489,6 @@ LLM_ROUTES=(
   "llm-ai-proxy-chat-openai.json"
   "llm-ai-proxy-chat-anthropic.json"
   "llm-ai-proxy-models.json"
-  "llm-litellm-chat.json"
-  "llm-litellm-models.json"
   "llm-claude-code-messages.json"
   "llm-claude-code-count-tokens.json"
 )
@@ -545,7 +538,6 @@ services/apisix/
 │   ├── llm-ai-proxy-chat-openai.json
 │   ├── llm-ai-proxy-chat-anthropic.json
 │   ├── llm-ai-proxy-models.json
-│   ├── llm-litellm-*.json
 │   ├── llm-claude-code-*.json
 │   └── ...
 ├── consumer-groups/          # Consumer group JSON files

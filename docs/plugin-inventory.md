@@ -85,7 +85,7 @@ Located at: `services/apisix/lua/apisix/plugins/`
 ```json
 {
   "billing-extractor": {
-    "provider": "openai",  // or "anthropic", "litellm"
+    "provider": "openai",  // or "anthropic"
     "endpoint": "chat"
   }
 }
@@ -165,18 +165,18 @@ Located at: `services/apisix/lua/apisix/plugins/`
 
 ## Route Plugin Matrix
 
-| Plugin | /llm/ai-proxy/* | /llm/litellm/* | /llm/claude-code/* |
-|--------|-----------------|----------------|-------------------|
-| auth-transform | Yes | Yes | Yes |
-| openai-auth | Yes | Yes | No |
-| key-auth | No | No | Yes |
-| model-policy | Yes | No | No |
-| ai-proxy | Yes | No | No |
-| proxy-rewrite | No | Yes | Yes |
-| billing-extractor | No | Yes | Yes |
-| provider-response-id | Yes | Yes | No |
-| file-logger | Yes | Yes | Yes |
-| request-id | Yes | Yes | Yes |
+| Plugin | /llm/ai-proxy/* | /llm/claude-code/* |
+|--------|-----------------|-------------------|
+| auth-transform | Yes | Yes |
+| openai-auth | Yes | No |
+| key-auth | No | Yes |
+| model-policy | Yes | No |
+| ai-proxy | Yes | No |
+| proxy-rewrite | No | Yes |
+| billing-extractor | No | Yes |
+| provider-response-id | Yes | No |
+| file-logger | Yes | Yes |
+| request-id | Yes | Yes |
 
 ---
 

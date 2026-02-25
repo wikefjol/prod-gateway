@@ -17,7 +17,6 @@ curl -sI localhost:9080/health | grep X-Gateway-Revision
 | Path | Description |
 |------|-------------|
 | `/llm/ai-proxy/v1/*` | OpenAI-compatible, routes by model name |
-| `/llm/litellm/v1/*` | LiteLLM proxy |
 | `/llm/claude-code/v1/*` | Native Anthropic for Claude Code |
 | `/health` | Health check |
 | `/portal` | Self-service key management |
@@ -30,7 +29,7 @@ services/
 │   ├── routes/       # Route definitions
 │   └── lua/          # Custom plugins
 ├── portal/           # Key management UI (Flask)
-└── litellm/          # LiteLLM service
+└── litellm/          # Placeholder (archived)
 
 infra/
 ├── env/              # Environment files

@@ -85,10 +85,7 @@ CORE_ROUTES=(
 
 # LLM Gateway routes (new /llm/* namespace)
 LLM_ROUTES=(
-  # Setup A: LiteLLM (external routing)
-  "llm-litellm-chat.json"
-  "llm-litellm-models.json"
-  # Setup B: ai-proxy (APISIX-native routing)
+  # ai-proxy (APISIX-native routing)
   "llm-ai-proxy-chat-openai.json"
   "llm-ai-proxy-chat-anthropic.json"
   "llm-ai-proxy-models.json"
@@ -355,7 +352,7 @@ bootstrap_core_routes() {
 }
 
 bootstrap_llm_routes() {
-  if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${LITELLM_KEY:-}" ]; then
+  if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     log_info "Loading LLM routes (API keys detected)..."
     local ok=0 fail=0
 

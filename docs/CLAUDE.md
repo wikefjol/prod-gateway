@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LLM API Gateway built on Apache APISIX. Proxies requests to Anthropic, OpenAI, and LiteLLM with:
+LLM API Gateway built on Apache APISIX. Proxies requests to Anthropic and OpenAI with:
 - Per-consumer API key auth (key-auth plugin + Bearer token transformation)
 - Rate limiting (per-route burst + per-consumer-group quotas)
 - Billing data extraction (custom billing-extractor Lua plugin → kafka-logger)
@@ -61,7 +61,7 @@ services/
 │   ├── Dockerfile
 │   ├── src/app.py
 │   └── templates/
-├── litellm/     # placeholder
+├── litellm/     # placeholder (archived)
 └── openwebui/   # placeholder
 
 infra/
@@ -94,7 +94,7 @@ utils/
 - **ADMIN_KEY** (required - must be set in environment or .env.local)
 - VIEWER_KEY (defaults to ADMIN_KEY)
 - OIDC vars
-- Provider API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, LITELLM_KEY)
+- Provider API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY)
 - Port overrides (APISIX_GATEWAY_PORT, APISIX_ADMIN_PORT, PORTAL_PORT)
 
 **Setup:** Export `ADMIN_KEY` before running ctl commands, or create `.env.local` with `export ADMIN_KEY=<your-key>`.
@@ -134,13 +134,25 @@ utils/
 1. Update "Current focus" when starting an issue
 2. Document decisions in issue comments as you go
 3. For significant/architectural decisions: create ADR before implementing
-4. Update "Last completed" when done
+4. If routes, plugins, or endpoints change: update docs that list them (see Doc Sync Checklist)
+5. Update "Last completed" when done
 
 ### Deviation check
 If implementation deviates from common patterns (e.g., unusual folder structure, non-standard tooling, custom solution over established library), an ADR MUST exist explaining why. No ADR = assume drift, discuss before proceeding.
 
+## Doc Sync Checklist
+
+When routes, endpoints, or plugins change, update:
+- `README.md` — endpoint table, project structure
+- `routes.txt` — URL inventory
+- `docs/llm-gateway-api.md` — endpoint docs + examples
+- `docs/gateway-architecture.md` — route tables, file listings, bootstrap snippets
+- `docs/USER_GUIDE.md` — endpoint table, provider comparison
+- `docs/plugin-inventory.md` — plugin matrix
+- `docs/diagrams.md` — mermaid diagrams
+
 ## Current Focus
-- **Active:** (none)
+- **Active:** #47 archive litellm routes
 - **Last completed:** #49 portal chat test broken → deprecated Anthropic models (Feb 2026)
 
 ## Issue Dependencies (Feb 2025)
