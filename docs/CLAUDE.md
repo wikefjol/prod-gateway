@@ -141,7 +141,7 @@ If implementation deviates from common patterns (e.g., unusual folder structure,
 
 ## Current Focus
 - **Active:** (none)
-- **Last completed:** #46 portal route review → ADR-004 (Feb 2025)
+- **Last completed:** #49 portal chat test broken → deprecated Anthropic models (Feb 2026)
 
 ## Issue Dependencies (Feb 2025)
 
