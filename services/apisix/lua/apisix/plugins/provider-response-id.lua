@@ -1,3 +1,11 @@
+-- provider-response-id
+-- Purpose: Extract response ID (chatcmpl-xxx / msg_xxx) from streaming or non-streaming responses
+-- Phase: body_filter
+-- Priority: 900
+-- Schema: { max_body_bytes: int }
+-- Ctx vars set: provider_response_id
+-- Note: used on ai-proxy routes where billing-extractor is absent
+
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 

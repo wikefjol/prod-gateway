@@ -1,3 +1,11 @@
+-- model-policy
+-- Purpose: Model registry + per-consumer-group access control; also renders /models response
+-- Phase: access
+-- Priority: 2000
+-- Schema: { action: "enforce" | "render" }
+-- Ctx vars set: model_requested, model_effective, upstream_provider (via APISIX ctx vars)
+-- Note: MODEL_REGISTRY is the single source of truth for all models — do not duplicate elsewhere
+
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 

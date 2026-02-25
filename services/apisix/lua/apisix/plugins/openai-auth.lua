@@ -1,3 +1,10 @@
+-- openai-auth
+-- Purpose: key-auth variant that returns OpenAI-format error responses (401 with error.code)
+-- Phase: rewrite
+-- Priority: 2500
+-- Schema: { header: "x-api-key", hide_credentials: bool }
+-- Ctx vars set: consumer context (via APISIX consumer attachment)
+
 local core = require("apisix.core")
 local consumer_mod = require("apisix.consumer")
 

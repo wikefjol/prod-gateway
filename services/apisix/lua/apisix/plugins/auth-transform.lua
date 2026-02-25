@@ -1,3 +1,10 @@
+-- auth-transform
+-- Purpose: Convert Authorization: Bearer <token> to X-Api-Key: <token>; sanitize request IDs
+-- Phase: rewrite
+-- Priority: 12020 (before key-auth at 2500)
+-- Schema: { mode: "bearer_to_api_key", sanitize_request_ids: bool }
+-- Ctx vars set: none (modifies headers in place)
+
 local core = require("apisix.core")
 
 local plugin_name = "auth-transform"

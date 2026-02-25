@@ -56,4 +56,4 @@ infra/
 
 - [User Guide](docs/USER_GUIDE.md) - API usage examples
 - [Architecture](docs/gateway-architecture.md) - Design details
-- [Plugin Inventory](docs/plugin-inventory.md) - Custom plugins
+- [ADRs](docs/adr/) - Architectural decisions

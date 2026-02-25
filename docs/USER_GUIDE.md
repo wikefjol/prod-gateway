@@ -32,12 +32,24 @@ Authorization: Bearer <your-key>
 
 ## Available Endpoints
 
-| Use Case | Base URL | SDK Format |
-|----------|----------|------------|
-| ai-proxy (all models) | `/llm/ai-proxy/v1` | OpenAI |
-| Claude Code sidecar | `/llm/claude-code/v1` | Anthropic |
+| Use Case | Base URL | Protocol |
+|----------|----------|----------|
+| ai-proxy (all models) | `/llm/ai-proxy/v1` | OpenAI-compatible |
+| Claude Code sidecar | `/llm/claude-code/v1` | Anthropic native |
 
-Full URLs use base `https://lamassu.ita.chalmers.se`
+Full URLs use base `https://lamassu.ita.chalmers.se`.
+
+**Claude Code sidecar** is restricted to the `claude_code_users` consumer group.
+
+## Consumer Groups & Model Access
+
+| Group | Models | Rate Limit |
+|-------|--------|------------|
+| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-haiku-4-5 | 1M req/week |
+| `premium_user` | All models | 1M req/week |
+| `claude_code_users` | All models + Claude Code sidecar | 1M req/week |
+
+For the current model list, query the API: `GET /llm/ai-proxy/v1/models`
 
 ## Usage Examples
 
@@ -72,6 +84,14 @@ export OPENAI_API_KEY="<your-key>"
 export OPENAI_BASE_URL="https://lamassu.ita.chalmers.se/llm/ai-proxy/v1"
 ```
 
+### OpenWebUI
+
+Browser-based clients (CORS enabled on chat/models routes):
+
+| Setup | Base URL |
+|-------|----------|
+| ai-proxy | `https://lamassu.ita.chalmers.se/llm/ai-proxy/v1` |
+
 ### Mathematica
 
 ```mathematica
@@ -97,6 +117,19 @@ curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
   -d '{"model": "claude-haiku-4-5", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
+## Common Headers
+
+**Request:**
+- `Authorization: Bearer <key>` (required)
+- `Content-Type: application/json` (for POST)
+- `X-Request-Id: <uuid>` (optional, generated if missing)
+
+**Response:**
+- `X-Request-Id` — request trace ID
+- `X-RateLimit-Limit` — quota limit
+- `X-RateLimit-Remaining` — remaining requests
+- `X-RateLimit-Reset` — reset timestamp
+
 ## Rate Limits
 
 | Tier | Requests/Week |
@@ -104,14 +137,9 @@ curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
 | Base | 1,000,000 |
 | Premium | 1,000,000 |
 
-Monitor usage via response headers:
-- `X-RateLimit-Limit` - your quota
-- `X-RateLimit-Remaining` - requests left
-- `X-RateLimit-Reset` - reset timestamp
-
 ## Streaming
 
-Streaming works for all endpoints. For OpenAI SDK with usage tracking in streams:
+Streaming works for all endpoints. For usage tracking in streams:
 
 ```python
 response = client.chat.completions.create(
@@ -123,6 +151,10 @@ response = client.chat.completions.create(
 ```
 
 ## Errors
+
+```json
+{"error": {"message": "...", "type": "...", "code": "..."}}
+```
 
 | Code | Meaning |
 |------|---------|

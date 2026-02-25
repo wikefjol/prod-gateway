@@ -1,3 +1,11 @@
+-- stream-usage-injector
+-- Purpose: Inject stream_options.include_usage into streaming requests so providers return token counts
+-- Phase: access (inject into request body), body_filter (handle response)
+-- Priority: 1000
+-- Schema: { provider: "openai" | "anthropic-openai" }
+-- Ctx vars set: none
+-- WARNING: INACTIVE — not registered in config.yaml and not wired into any routes. Investigate before use.
+
 local core = require("apisix.core")
 local cjson = require("cjson.safe")
 
