@@ -1,6 +1,6 @@
 # LLM Gateway User Guide
 
-API gateway providing unified access to Anthropic, OpenAI, and LiteLLM with authentication and rate limiting.
+API gateway providing unified access to Anthropic and OpenAI with authentication and rate limiting.
 
 ## Getting Started
 
@@ -35,14 +35,9 @@ Authorization: Bearer <your-key>
 | Use Case | Base URL | SDK Format |
 |----------|----------|------------|
 | ai-proxy (all models) | `/llm/ai-proxy/v1` | OpenAI |
-| LiteLLM | `/llm/litellm/v1` | OpenAI |
 | Claude Code sidecar | `/llm/claude-code/v1` | Anthropic |
 
 Full URLs use base `https://lamassu.ita.chalmers.se`
-
-### ai-proxy vs LiteLLM
-
-Both provide OpenAI-compatible API. **ai-proxy** routes directly to providers based on model name prefix. **LiteLLM** uses an external service for model routing.
 
 ## Usage Examples
 
@@ -58,7 +53,7 @@ client = OpenAI(
 
 # Works with both OpenAI and Anthropic models
 response = client.chat.completions.create(
-    model="gpt-4o-mini",  # or "claude-3-5-haiku-20241022"
+    model="gpt-4o-mini",  # or "claude-haiku-4-5"
     messages=[{"role": "user", "content": "Hello"}]
 )
 ```
@@ -99,7 +94,7 @@ curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
 curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
-  -d '{"model": "claude-3-5-haiku-20241022", "messages": [{"role": "user", "content": "Hello"}]}'
+  -d '{"model": "claude-haiku-4-5", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
 ## Rate Limits

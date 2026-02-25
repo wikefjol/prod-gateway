@@ -26,7 +26,7 @@ flowchart LR
     subgraph Routes["Route Plugins"]
         direction TB
         MP["model-policy<br/>(ai-proxy only)"]
-        PR["proxy-rewrite<br/>(litellm, claude-code)"]
+        PR["proxy-rewrite<br/>(claude-code)"]
         CR["consumer-restriction<br/>(claude-code only)"]
     end
 
@@ -34,15 +34,13 @@ flowchart LR
         direction TB
         OAI[api.openai.com]
         ANT[api.anthropic.com]
-        LLM[LiteLLM Service]
     end
 
     Clients --> AT --> KA
     KA --> MP & PR & CR
     MP -->|"ai-proxy"| OAI & ANT
-    PR --> LLM
+    PR --> ANT
     CR --> ANT
-    LLM -.-> OAI & ANT
 ```
 
 ## Response Flow
@@ -59,13 +57,11 @@ flowchart RL
         direction TB
         OAI[api.openai.com]
         ANT[api.anthropic.com]
-        LLM[LiteLLM Service]
     end
 
     subgraph Resp["Response Plugins"]
         direction TB
         PRID["provider-response-id<br/>(ai-proxy)"]
-        BE_PRID["billing-extractor +<br/>provider-response-id<br/>(litellm)"]
         BE["billing-extractor<br/>(claude-code)"]
     end
 
@@ -74,9 +70,8 @@ flowchart RL
     Clients["Clients"]
 
     OAI & ANT --> PRID
-    LLM --> BE_PRID
     ANT --> BE
-    PRID & BE_PRID & BE --> FL --> LOGS
+    PRID & BE --> FL --> LOGS
     FL --> Clients
 ```
 

@@ -14,47 +14,16 @@ Consumers created via portal (OIDC/EntraID). Keys managed in portal UI.
 
 ## Setups
 
-Three parallel setups available:
+Two setups available:
 
 | Setup | Base Path | Protocol | Routing |
 |-------|-----------|----------|---------|
-| LiteLLM | `/llm/litellm/v1` | OpenAI-compatible | External LiteLLM server |
 | ai-proxy | `/llm/ai-proxy/v1` | OpenAI-compatible | APISIX-native, model-based |
 | Claude Code | `/llm/claude-code/v1` | Anthropic native | Direct to Anthropic |
 
 ---
 
-## Setup A: LiteLLM
-
-External LiteLLM server handles model routing.
-
-### POST /llm/litellm/v1/chat/completions
-
-OpenAI chat completions format. Supports streaming.
-
-```bash
-curl -X POST https://gateway/llm/litellm/v1/chat/completions \
-  -H "Authorization: Bearer $API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o-mini",
-    "messages": [{"role": "user", "content": "Hello"}],
-    "stream": false
-  }'
-```
-
-### GET /llm/litellm/v1/models
-
-List available models (from LiteLLM).
-
-```bash
-curl https://gateway/llm/litellm/v1/models \
-  -H "Authorization: Bearer $API_KEY"
-```
-
----
-
-## Setup B: ai-proxy (APISIX Native)
+## ai-proxy (APISIX Native)
 
 APISIX routes to provider based on model name prefix:
 - `gpt-*`, `o1-*`, `o3-*`, `davinci-*`, `text-embedding-*` → OpenAI
@@ -79,7 +48,7 @@ curl -X POST https://gateway/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-3-haiku-20240307",
+    "model": "claude-haiku-4-5",
     "messages": [{"role": "user", "content": "Hello"}]
   }'
 ```
@@ -99,14 +68,14 @@ Response (OpenAI format):
   "object": "list",
   "data": [
     {"id": "gpt-4o-mini", "object": "model", "created": 1721172741, "owned_by": "system"},
-    {"id": "claude-3-haiku-20240307", "object": "model", "created": 1709769600, "owned_by": "anthropic"}
+    {"id": "claude-haiku-4-5", "object": "model", "created": 1709769600, "owned_by": "anthropic"}
   ]
 }
 ```
 
 ---
 
-## Setup C: Claude Code Sidecar
+## Claude Code Sidecar
 
 Native Anthropic Messages API. **Restricted to `claude_code_users` group.**
 
@@ -145,7 +114,7 @@ curl -X POST https://gateway/llm/claude-code/v1/messages/count_tokens \
 
 | Group | Models | Rate Limit |
 |-------|--------|------------|
-| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-3-5-haiku-20241022, claude-3-haiku-20240307 | 1M/week |
+| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-haiku-4-5 | 1M/week |
 | `premium_user` | All models | 1M/week |
 | `claude_code_users` | All models + Claude Code sidecar access | 1M/week |
 
@@ -162,8 +131,6 @@ curl -X POST https://gateway/llm/claude-code/v1/messages/count_tokens \
 ### Anthropic
 - claude-sonnet-4-20250514, claude-opus-4-20250514
 - claude-sonnet-4-5, claude-opus-4-5, claude-haiku-4-5
-- claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022
-- claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
 
 ---
 
@@ -201,5 +168,4 @@ For browser-based clients (CORS enabled on chat/models routes):
 
 | Setup | Base URL |
 |-------|----------|
-| LiteLLM | `https://gateway/llm/litellm/v1` |
 | ai-proxy | `https://gateway/llm/ai-proxy/v1` |
