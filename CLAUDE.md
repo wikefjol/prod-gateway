@@ -12,6 +12,7 @@ LLM API gateway (Apache APISIX) — auth, rate-limiting, billing, self-service p
 Add `--test`/`-t` for test env (ports 9081/9181).
 
 ## Architecture
+Repo: wikefjol/prod-gateway
 Stack: Apache APISIX + Lua plugins, Flask portal, Docker Compose, external CORE_NET
 ```
 services/
@@ -32,9 +33,10 @@ Dev ports: 9080 gateway · 9180 admin · 3001 portal
 
 ## Workflow
 1. Check Current Focus + relevant ADRs before touching an area
-2. Architectural decisions: write ADR first, then implement
-3. If pattern deviates and no ADR exists → flag before proceeding
-4. Routes/plugins change → update docs per docs/adr/005-documentation-strategy.md
+2. Check `gh issue view <N>` for full context before starting any issue-tagged work
+3. Architectural decisions: write ADR first, then implement
+4. If pattern deviates and no ADR exists → flag before proceeding
+5. Routes/plugins change → update docs per docs/adr/005-documentation-strategy.md
 
 ## Testing
 `billing-tests/`: pytest for billing/SSE parsing logic
@@ -55,7 +57,7 @@ YOU MUST NOT proceed without an ADR when implementation deviates from establishe
 - Diagrams: docs/diagrams/
 
 ## Current Focus
-- Active: #50 documentation consolidation (Feb 2026)
+- Active: #50 documentation consolidation (Feb 2026) — `gh issue view 50` for details
 - Last completed: #47 archive litellm routes (Feb 2026)
 
 ## Gotchas
