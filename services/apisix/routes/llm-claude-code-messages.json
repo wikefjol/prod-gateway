@@ -41,7 +41,7 @@
     },
     "response-wiretap": {
       "enabled": true,
-      "log_path": "/var/log/apisix/wiretap/llm-claude-code.jsonl"
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-claude-code.jsonl"
     }
   },
   "upstream": {
