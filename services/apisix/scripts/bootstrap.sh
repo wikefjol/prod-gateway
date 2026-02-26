@@ -32,6 +32,7 @@ PROJECT_ROOT="$(cd "$SERVICE_DIR/../.." && pwd)"
 ROUTES_DIR="$SERVICE_DIR/routes"
 CONSUMER_GROUPS_DIR="$SERVICE_DIR/consumer-groups"
 PLUGIN_METADATA_DIR="$SERVICE_DIR/plugin-metadata"
+TEST_CONSUMERS_DIR="$SERVICE_DIR/test-consumers"
 
 # -------------------------
 # Logging helpers
@@ -81,6 +82,14 @@ CORE_ROUTES=(
   "portal-redirect-route.json"
   "oidc-generic-route.json"
   "root-redirect-route.json"
+)
+
+# Deterministic test consumers (dev/test only)
+TEST_CONSUMERS=(
+  "test-base-1.json"
+  "test-base-2.json"
+  "test-premium-1.json"
+  "test-premium-2.json"
 )
 
 # LLM Gateway routes (new /llm/* namespace)
@@ -351,6 +360,69 @@ bootstrap_core_routes() {
   return 0
 }
 
+load_test_consumer() {
+  local consumer_file="$1"
+  local consumer_path="$TEST_CONSUMERS_DIR/$consumer_file"
+
+  if [ ! -f "$consumer_path" ]; then
+    log_error "Test consumer file not found: $consumer_path"
+    return 1
+  fi
+
+  local username payload response http_code body
+  username="$(jq -r '.username // empty' "$consumer_path" 2>/dev/null || true)"
+  payload="$(cat "$consumer_path")"
+
+  if [ -z "$username" ]; then
+    log_error "Test consumer JSON missing .username: $consumer_path"
+    return 1
+  fi
+
+  log_info "Applying consumer (PUT): $(basename "$consumer_path") (username=$username)"
+  response="$(curl -sS -w "\n%{http_code}" -X PUT "$ADMIN_API/consumers/$username" \
+    -H "Content-Type: application/json" \
+    -H "X-API-KEY: $ADMIN_KEY" \
+    -d "$payload")"
+
+  http_code="$(tail -n1 <<<"$response")"
+  body="$(sed '$d' <<<"$response")"
+
+  if [[ "$http_code" =~ ^(200|201)$ ]]; then
+    log_success "Applied consumer: $(basename "$consumer_path")"
+    return 0
+  else
+    log_error "Failed consumer: $(basename "$consumer_path") (HTTP $http_code)"
+    echo "$body" >&2
+    return 1
+  fi
+}
+
+bootstrap_test_consumers() {
+  if [ "$ENVIRONMENT" = "prod" ]; then
+    log_info "Skipping test consumers (prod environment)"
+    return 0
+  fi
+
+  log_info "Loading test consumers..."
+  local ok=0 fail=0
+
+  for consumer in "${TEST_CONSUMERS[@]}"; do
+    if load_test_consumer "$consumer"; then
+      ok=$((ok + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done
+
+  log_info "Loaded $ok/${#TEST_CONSUMERS[@]} test consumers"
+
+  if [ "$fail" -ne 0 ]; then
+    log_error "Test consumer bootstrap failed ($fail failures)"
+    return 1
+  fi
+  return 0
+}
+
 bootstrap_llm_routes() {
   if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     log_info "Loading LLM routes (API keys detected)..."
@@ -411,6 +483,10 @@ main() {
   fi
 
   bootstrap_llm_routes
+
+  if ! bootstrap_test_consumers; then
+    exit 1
+  fi
 
   log_success "Bootstrap completed for $ENVIRONMENT environment"
 }
