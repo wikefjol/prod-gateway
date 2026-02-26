@@ -32,11 +32,15 @@ Dev ports: 9080 gateway · 9180 admin · 3001 portal
 - One fact, one place: model lists in MODEL_REGISTRY only; plugin docs in Lua headers only
 
 ## Workflow
-1. Check Current Focus + relevant ADRs before touching an area
-2. Check `gh issue view <N>` for full context before starting any issue-tagged work
-3. Architectural decisions: write ADR first, then implement
-4. If pattern deviates and no ADR exists → flag before proceeding
-5. Routes/plugins change → update docs per docs/adr/005-documentation-strategy.md
+
+1. **Issue first**: If no issue exists for the work, create one before coding
+2. **Branch from issue**: Create `issue-<number>-<description>` branch
+3. **Plan mode**: Review requirements, then implement
+4. **Test**: Run tests before committing
+5. **Routes/plugins change** → update docs per docs/adr/005-documentation-strategy.md
+6. **Commit**: Use conventional commits (feat/fix/docs/test/refactor)
+7. **PR**: Merge back to `filip-explore` after completion
+
 
 ## Testing
 `billing-tests/`: pytest for billing/SSE parsing logic
@@ -57,7 +61,7 @@ YOU MUST NOT proceed without an ADR when implementation deviates from establishe
 - Diagrams: docs/diagrams/
 
 ## Current Focus
-- Active: #50 documentation consolidation (Feb 2026) — `gh issue view 50` for details
+- Active: #54 AWS-hosted models support — `gh issue view 54` for details
 - Last completed: #47 archive litellm routes (Feb 2026)
 
 ## Gotchas
