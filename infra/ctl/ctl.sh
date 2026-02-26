@@ -304,7 +304,7 @@ case "$CMD" in
     ;;
 
   logs)
-    local target="${SVC:-apisix}"
+    target="${SVC:-apisix}"
     dc "$target" logs "$@"
     ;;
 
@@ -316,12 +316,12 @@ case "$CMD" in
     ;;
 
   exec)
-    local target="${SVC:-apisix}"
+    target="${SVC:-apisix}"
     dc "$target" exec "$target" "$@"
     ;;
 
   shell)
-    local target="${SVC:-apisix}"
+    target="${SVC:-apisix}"
     dc "$target" exec "$target" sh
     ;;
 

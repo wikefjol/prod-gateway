@@ -1,0 +1,10 @@
+{
+  "username": "test-base-1",
+  "desc": "Deterministic test user — dev/test only",
+  "group_id": "base_user",
+  "plugins": {
+    "key-auth": {
+      "key": "test-key-base-1"
+    }
+  }
+}
