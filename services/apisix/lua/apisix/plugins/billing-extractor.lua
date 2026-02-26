@@ -63,7 +63,7 @@ local schema = {
     type = "object",
     properties = {
         max_resp_body_bytes = { type = "integer", minimum = 1, default = 262144 },
-        provider = { type = "string", enum = {"anthropic", "openai", "litellm"} },
+        provider = { type = "string", enum = {"anthropic", "openai"} },
         endpoint = { type = "string" },
     },
 }

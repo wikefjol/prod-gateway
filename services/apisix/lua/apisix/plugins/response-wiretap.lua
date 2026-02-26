@@ -28,7 +28,7 @@ local schema = {
         enabled = { type = "boolean", default = true },
         always_capture = { type = "boolean", default = false },
         max_body_bytes = { type = "integer", minimum = 1024, default = 524288 },
-        log_path = { type = "string", default = "/usr/local/apisix/logs/wiretap.jsonl" },
+        log_path = { type = "string", default = "/usr/local/apisix/logs/wiretap/default.jsonl" },
     },
 }
 
