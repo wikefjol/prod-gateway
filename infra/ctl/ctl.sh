@@ -326,10 +326,27 @@ case "$CMD" in
     ;;
 
   routes)
-    curl -s "http://localhost:${APISIX_ADMIN_PORT:-9180}/apisix/admin/routes" \
-      -H "X-API-KEY: ${ADMIN_KEY}" | \
-      python3 -c "import sys,json; d=json.load(sys.stdin); [print(f\"{r['value'].get('id','?'):30} {r['value'].get('uri','?')}\") for r in d.get('list',[])]" 2>/dev/null || \
-      echo "Failed to fetch routes. Is gateway running?"
+    VERBOSE=""
+    for arg in "$@"; do
+      case "$arg" in --verbose|-v) VERBOSE="1" ;; esac
+    done
+    if [[ -n "$VERBOSE" ]]; then
+      curl -s "http://localhost:${APISIX_ADMIN_PORT:-9180}/apisix/admin/routes" \
+        -H "X-API-KEY: ${ADMIN_KEY}" | python3 -m json.tool 2>/dev/null || \
+        echo "Failed to fetch routes. Is gateway running?"
+    else
+      curl -s "http://localhost:${APISIX_ADMIN_PORT:-9180}/apisix/admin/routes" \
+        -H "X-API-KEY: ${ADMIN_KEY}" | python3 -c "import sys,json
+d=json.load(sys.stdin)
+fmt='{:<30} {:<20} {}'
+print(fmt.format('ID','METHODS','URI'))
+print('-'*80)
+for r in d.get('list',[]):
+    v=r['value']
+    methods=','.join(v.get('methods') or ['*'])
+    print(fmt.format(v.get('id','?'), methods, v.get('uri','?')))
+" 2>/dev/null || echo "Failed to fetch routes. Is gateway running?"
+    fi
     ;;
 
   bootstrap)
@@ -359,7 +376,7 @@ Usage: ./infra/ctl/ctl.sh [command] [service] [options]
   ps/status           Show status of all services
   exec [service] cmd  Run command in container (default: apisix)
   shell [service]     Open shell in container (default: apisix)
-  routes              List routes from Admin API
+  routes [-v]         List routes (default: compact table; -v: full JSON)
   bootstrap           Load routes into APISIX (additive)
 
 Services: ${CORE_SERVICES[*]}
