@@ -28,8 +28,7 @@ services/
 ├── apisix/           # Gateway (APISIX + etcd)
 │   ├── routes/       # Route definitions
 │   └── lua/          # Custom plugins
-├── portal/           # Key management UI (Flask)
-└── litellm/          # Placeholder (archived)
+└── portal/           # Key management UI (Flask)
 
 infra/
 ├── env/              # Environment files
