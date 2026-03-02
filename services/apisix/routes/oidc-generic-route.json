@@ -10,7 +10,7 @@
       "scope": "openid profile email",
       "redirect_uri": "$OIDC_REDIRECT_URI",
       "bearer_only": false,
-      "ssl_verify": false,
+      "ssl_verify": true,
       "timeout": 3,
       "session": {
         "secret": "$OIDC_SESSION_SECRET"
