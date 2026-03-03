@@ -1,6 +1,6 @@
 {
-  "captured_at": "2026-03-03T11:15:46.191060+00:00",
-  "gateway_revision": "09f9837",
+  "captured_at": "2026-03-03T14:18:21.072672+00:00",
+  "gateway_revision": "49088bb",
   "request": {
     "method": "GET",
     "path": "/llm/ai-proxy/v1/models"
@@ -8,13 +8,13 @@
   "response": {
     "status": 200,
     "headers": {
-      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "date": "Tue, 03 Mar 2026 14:18:21 GMT",
       "content-type": "application/json",
       "transfer-encoding": "chunked",
       "connection": "keep-alive",
       "server": "APISIX/3.15.0",
       "x-gateway-revision": "unknown",
-      "x-request-id": "6b134ab2-51fd-4910-a298-9fcfea129dd9",
+      "x-request-id": "e6969a72-fd5f-4f62-9a60-68bd0dc87916",
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,OPTIONS",
       "access-control-max-age": "3600",

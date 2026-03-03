@@ -1,6 +1,6 @@
 {
-  "captured_at": "2026-03-03T11:15:46.212632+00:00",
-  "gateway_revision": "09f9837",
+  "captured_at": "2026-03-03T14:18:21.090816+00:00",
+  "gateway_revision": "49088bb",
   "request": {
     "method": "POST",
     "path": "/llm/ai-proxy/v1/chat/completions",
@@ -17,7 +17,7 @@
   "response": {
     "status": 404,
     "headers": {
-      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "date": "Tue, 03 Mar 2026 14:18:21 GMT",
       "content-type": "text/plain; charset=utf-8",
       "transfer-encoding": "chunked",
       "connection": "keep-alive",
