@@ -1,0 +1,52 @@
+{
+  "id": "llm-ai-proxy-chat-vllm-gemma",
+  "name": "llm-ai-proxy-chat-vllm-gemma",
+  "uri": "/llm/ai-proxy/v1/chat/completions",
+  "methods": ["POST", "OPTIONS"],
+  "priority": 11,
+  "vars": [["post_arg.model", "==", "gemma-3-12b-it"]],
+  "plugins": {
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": "POST,OPTIONS",
+      "allow_headers": "Authorization,Content-Type,X-Request-Id",
+      "expose_headers": "X-Request-Id",
+      "max_age": 3600
+    },
+    "auth-transform": {
+      "mode": "bearer_to_api_key",
+      "sanitize_request_ids": true
+    },
+    "openai-auth": {
+      "header": "x-api-key",
+      "hide_credentials": true
+    },
+    "model-policy": {
+      "action": "enforce"
+    },
+    "request-id": {
+      "header_name": "X-Request-Id",
+      "include_in_response": true
+    },
+    "ai-proxy": {
+      "provider": "openai-compatible",
+      "auth": {
+        "header": {}
+      },
+      "override": {
+        "endpoint": "http://alvis-worker1.c3se.chalmers.se:43111/v1/chat/completions"
+      },
+      "options": {
+        "model": "google/gemma-3-12b-it"
+      }
+    },
+    "provider-response-id": {},
+    "file-logger": {
+      "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+    },
+    "response-wiretap": {
+      "enabled": true,
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl"
+    }
+  }
+}

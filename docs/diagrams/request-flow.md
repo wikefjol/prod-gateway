@@ -32,11 +32,12 @@ flowchart LR
         direction TB
         OAI[api.openai.com]
         ANT[api.anthropic.com]
+        VLLM["Alvis vLLM<br/>(C3SE HPC)"]
     end
 
     Clients --> AT --> KA
     KA --> MP & PR & CR
-    MP -->|"ai-proxy"| OAI & ANT
+    MP -->|"ai-proxy"| OAI & ANT & VLLM
     PR --> ANT
     CR --> ANT
 ```
