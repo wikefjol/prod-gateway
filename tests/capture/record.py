@@ -246,7 +246,19 @@ def main():
     f = capture_simple(admin, "routes_admin.json", "GET", "/apisix/admin/routes")
     results.append(("routes_admin.json", f["response"]["status"]))
 
-    # 10. Access matrix
+    # 10. Embeddings (nomic single input)
+    print("Capturing embeddings (nomic single)...")
+    (FIXTURES_DIR / "embeddings").mkdir(parents=True, exist_ok=True)
+    f = capture_simple(
+        premium,
+        "embeddings/nomic_single.json",
+        "POST",
+        "/llm/ai-proxy/v1/embeddings",
+        json={"model": "nomic-embed-text-v1.5", "input": "hello world"},
+    )
+    results.append(("embeddings/nomic_single.json", f["response"]["status"]))
+
+    # 11. Access matrix
     if args.skip_matrix:
         print("Skipping access matrix (--skip-matrix)")
     else:

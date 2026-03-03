@@ -1,6 +1,6 @@
 {
-  "captured_at": "2026-03-03T11:15:46.224234+00:00",
-  "gateway_revision": "09f9837",
+  "captured_at": "2026-03-03T14:18:21.102243+00:00",
+  "gateway_revision": "49088bb",
   "request": {
     "method": "GET",
     "path": "/apisix/admin/routes"
@@ -8,7 +8,7 @@
   "response": {
     "status": 200,
     "headers": {
-      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "date": "Tue, 03 Mar 2026 14:18:21 GMT",
       "content-type": "application/json",
       "transfer-encoding": "chunked",
       "connection": "keep-alive",
