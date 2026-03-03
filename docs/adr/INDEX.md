@@ -9,3 +9,4 @@
 | [004](004-portal-route-structure.md) | Portal Route Structure | Portal routes served under `/portal/` prefix via APISIX |
 | [005](005-documentation-strategy.md) | Documentation Strategy | One-fact-one-place policy; doc ownership per file type |
 | [006](006-vllm-multi-port-routing.md) | vLLM Multi-Port Routing Strategy | One route per model at priority 11; scaling options discussed |
+| [007](007-black-box-testing.md) | Black-Box Testing with Characterization Fixtures | Capture real gateway responses as fixtures; test against those; commit to git |
