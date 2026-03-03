@@ -43,7 +43,20 @@ Dev ports: 9080 gateway · 9180 admin · 3001 portal
 
 
 ## Testing
-`billing-tests/`: pytest for billing/SSE parsing logic
+`billing-tests/`: legacy pytest for billing/SSE parsing (separate venv, remote BASE_URL)
+`tests/`: gateway test suite (issue #60) — local-dev-first, characterization testing
+```
+tests/
+├── conftest.py          # fixtures: base_client, premium_client, openai_*_client, admin_client, load_fixture
+├── pytest.ini           # markers: smoke, live, vllm
+├── requirements.txt     # httpx, pytest, pytest-asyncio, openai
+├── fixtures/            # JSON snapshots from capture/record.py
+└── capture/record.py    # probe live gateway → save fixtures (idempotent)
+```
+Run: `tests/.venv/bin/pytest tests/` · Capture: `tests/.venv/bin/python tests/capture/record.py`
+Keys: deterministic dev-only from `services/apisix/test-consumers/` (test-key-base-1, test-key-premium-1)
+**IMPORTANT**: API routes are `/llm/ai-proxy/v1/...`, NOT `/v1/...`
+Reference: `docs/incoming/TEST_SUITE_OVERVIEW.md` (client-side suite we're adapting from)
 Revision check: `curl -sI http://localhost:9080/health | grep X-Gateway-Revision`
 Should match: `git rev-parse --short HEAD`
 
@@ -61,8 +74,8 @@ YOU MUST NOT proceed without an ADR when implementation deviates from establishe
 - Diagrams: docs/diagrams/
 
 ## Current Focus
-- Active: #54 AWS-hosted models support — `gh issue view 54` for details
-- Last completed: #47 archive litellm routes (Feb 2026)
+- Active: #60 gateway test suite — `gh issue view 60` for task list
+- Last completed: #57 add Alvis vLLM models (Mar 2026)
 
 ## Gotchas
 - ADMIN_KEY must be set before any ctl command (export or infra/env/.env.local)
