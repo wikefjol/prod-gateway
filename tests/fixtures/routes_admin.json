@@ -1,0 +1,838 @@
+{
+  "captured_at": "2026-03-03T11:15:46.224234+00:00",
+  "gateway_revision": "09f9837",
+  "request": {
+    "method": "GET",
+    "path": "/apisix/admin/routes"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "content-type": "application/json",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "server": "APISIX/3.15.0",
+      "access-control-allow-origin": "*",
+      "access-control-allow-credentials": "true",
+      "access-control-expose-headers": "*",
+      "access-control-max-age": "3600",
+      "x-api-version": "v3"
+    },
+    "body": {
+      "list": [
+        {
+          "value": {
+            "id": "health-simple",
+            "plugins": {
+              "serverless-pre-function": {
+                "functions": [
+                  "return function(conf, ctx) ngx.header['Content-Type'] = 'application/json' ngx.say('{\"status\":\"healthy\"}') return ngx.exit(200) end"
+                ],
+                "phase": "access"
+              }
+            },
+            "methods": [
+              "GET",
+              "HEAD"
+            ],
+            "update_time": 1772524908,
+            "uri": "/health",
+            "create_time": 1770967776
+          },
+          "createdIndex": 18,
+          "modifiedIndex": 873,
+          "key": "/apisix/routes/health-simple"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-chat-anthropic",
+            "name": "llm-ai-proxy-chat-anthropic",
+            "update_time": 1772524908,
+            "create_time": 1770967776,
+            "vars": [
+              [
+                "post_arg.model",
+                "~~",
+                "^claude"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "anthropic",
+                "auth": {
+                  "header": {
+                    "anthropic-version": "2023-06-01",
+                    "x-api-key": "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"
+                  }
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 10,
+            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 25,
+          "modifiedIndex": 878,
+          "key": "/apisix/routes/llm-ai-proxy-chat-anthropic"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-chat-openai",
+            "name": "llm-ai-proxy-chat-openai",
+            "update_time": 1772524908,
+            "create_time": 1770967776,
+            "vars": [
+              [
+                "post_arg.model",
+                "~~",
+                "^(gpt|o1|o3|davinci|text-embedding)"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "openai",
+                "auth": {
+                  "header": {
+                    "Authorization": "Bearer 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"
+                  }
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 10,
+            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 24,
+          "modifiedIndex": 877,
+          "key": "/apisix/routes/llm-ai-proxy-chat-openai"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-chat-vllm-gemma",
+            "name": "llm-ai-proxy-chat-vllm-gemma",
+            "update_time": 1772524909,
+            "create_time": 1772524737,
+            "vars": [
+              [
+                "post_arg.model",
+                "==",
+                "gemma-3-12b-it"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "openai-compatible",
+                "override": {
+                  "endpoint": "http://alvis-worker1.c3se.chalmers.se:43111/v1/chat/completions"
+                },
+                "auth": {
+                  "header": {}
+                },
+                "options": {
+                  "model": "google/gemma-3-12b-it"
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 11,
+            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 860,
+          "modifiedIndex": 881,
+          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-gemma"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-chat-vllm-gptoss",
+            "name": "llm-ai-proxy-chat-vllm-gptoss",
+            "update_time": 1772524909,
+            "create_time": 1772524737,
+            "vars": [
+              [
+                "post_arg.model",
+                "==",
+                "gpt-oss-20b"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "openai-compatible",
+                "override": {
+                  "endpoint": "http://alvis-worker1.c3se.chalmers.se:43121/v1/chat/completions"
+                },
+                "auth": {
+                  "header": {}
+                },
+                "options": {
+                  "model": "openai/gpt-oss-20b"
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 11,
+            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 861,
+          "modifiedIndex": 882,
+          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-gptoss"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-chat-vllm-qwen3",
+            "name": "llm-ai-proxy-chat-vllm-qwen3",
+            "update_time": 1772524908,
+            "create_time": 1772524737,
+            "vars": [
+              [
+                "post_arg.model",
+                "==",
+                "qwen3-coder-30b"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "openai-compatible",
+                "override": {
+                  "endpoint": "http://alvis-worker1.c3se.chalmers.se:43181/v1/chat/completions"
+                },
+                "auth": {
+                  "header": {}
+                },
+                "options": {
+                  "model": "Qwen/Qwen3-Coder-30B"
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 11,
+            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 859,
+          "modifiedIndex": 880,
+          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-qwen3"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-embed-vllm-nomic",
+            "name": "llm-ai-proxy-embed-vllm-nomic",
+            "update_time": 1772524909,
+            "create_time": 1772524737,
+            "vars": [
+              [
+                "post_arg.model",
+                "==",
+                "nomic-embed-text-v1.5"
+              ]
+            ],
+            "plugins": {
+              "ai-proxy": {
+                "provider": "openai-compatible",
+                "override": {
+                  "endpoint": "http://alvis-worker1.c3se.chalmers.se:43211/v1/embeddings"
+                },
+                "auth": {
+                  "header": {}
+                },
+                "options": {
+                  "model": "nomic-ai/nomic-embed-text-v1.5"
+                }
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-embed.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-embed.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "model-policy": {
+                "action": "enforce"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              }
+            },
+            "priority": 11,
+            "uri": "/llm/ai-proxy/v1/embeddings",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ]
+          },
+          "createdIndex": 862,
+          "modifiedIndex": 883,
+          "key": "/apisix/routes/llm-ai-proxy-embed-vllm-nomic"
+        },
+        {
+          "value": {
+            "id": "llm-ai-proxy-models",
+            "methods": [
+              "GET",
+              "OPTIONS"
+            ],
+            "name": "llm-ai-proxy-models",
+            "plugins": {
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "GET,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "model-policy": {
+                "action": "render"
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              }
+            },
+            "update_time": 1772524908,
+            "uri": "/llm/ai-proxy/v1/models",
+            "create_time": 1770967776
+          },
+          "createdIndex": 26,
+          "modifiedIndex": 879,
+          "key": "/apisix/routes/llm-ai-proxy-models"
+        },
+        {
+          "value": {
+            "id": "llm-claude-code-count-tokens",
+            "methods": [
+              "POST"
+            ],
+            "upstream": {
+              "type": "roundrobin",
+              "nodes": {
+                "api.anthropic.com:443": 1
+              },
+              "scheme": "https",
+              "pass_host": "node"
+            },
+            "name": "llm-claude-code-count-tokens",
+            "plugins": {
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "key-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "proxy-rewrite": {
+                "uri": "/v1/messages/count_tokens",
+                "headers": {
+                  "remove": [
+                    "Origin",
+                    "Referer",
+                    "Cookie",
+                    "Sec-Fetch-Site",
+                    "Sec-Fetch-Mode",
+                    "Sec-Fetch-Dest"
+                  ],
+                  "set": {
+                    "anthropic-version": "2023-06-01",
+                    "x-api-key": "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"
+                  }
+                }
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              },
+              "consumer-restriction": {
+                "type": "consumer_group_id",
+                "whitelist": [
+                  "claude_code_users"
+                ],
+                "rejected_msg": "Claude Code sidecar requires claude_code_users membership",
+                "rejected_code": 403
+              }
+            },
+            "update_time": 1772524909,
+            "uri": "/llm/claude-code/v1/messages/count_tokens",
+            "create_time": 1770967776
+          },
+          "createdIndex": 28,
+          "modifiedIndex": 885,
+          "key": "/apisix/routes/llm-claude-code-count-tokens"
+        },
+        {
+          "value": {
+            "id": "llm-claude-code-messages",
+            "methods": [
+              "POST"
+            ],
+            "upstream": {
+              "type": "roundrobin",
+              "nodes": {
+                "api.anthropic.com:443": 1
+              },
+              "scheme": "https",
+              "pass_host": "node"
+            },
+            "name": "llm-claude-code-messages",
+            "plugins": {
+              "billing-extractor": {
+                "provider": "anthropic",
+                "endpoint": "messages"
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-claude-code.jsonl",
+                "enabled": true
+              },
+              "key-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-claude-code.log"
+              },
+              "proxy-rewrite": {
+                "uri": "/v1/messages",
+                "headers": {
+                  "remove": [
+                    "Origin",
+                    "Referer",
+                    "Cookie",
+                    "Sec-Fetch-Site",
+                    "Sec-Fetch-Mode",
+                    "Sec-Fetch-Dest"
+                  ],
+                  "set": {
+                    "anthropic-version": "2023-06-01",
+                    "x-api-key": "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"
+                  }
+                }
+              },
+              "request-id": {
+                "header_name": "X-Request-Id",
+                "include_in_response": true
+              },
+              "consumer-restriction": {
+                "type": "consumer_group_id",
+                "whitelist": [
+                  "claude_code_users"
+                ],
+                "rejected_msg": "Claude Code sidecar requires claude_code_users membership",
+                "rejected_code": 403
+              }
+            },
+            "update_time": 1772524909,
+            "uri": "/llm/claude-code/v1/messages",
+            "create_time": 1770967776
+          },
+          "createdIndex": 27,
+          "modifiedIndex": 884,
+          "key": "/apisix/routes/llm-claude-code-messages"
+        },
+        {
+          "value": {
+            "id": "llm-litellm-chat",
+            "methods": [
+              "POST",
+              "OPTIONS"
+            ],
+            "upstream": {
+              "type": "roundrobin",
+              "nodes": {
+                "anast.ita.chalmers.se:4000": 1
+              },
+              "scheme": "https",
+              "pass_host": "node"
+            },
+            "name": "llm-litellm-chat",
+            "plugins": {
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "POST,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "proxy-rewrite": {
+                "uri": "/v1/chat/completions",
+                "headers": {
+                  "remove": [
+                    "Origin",
+                    "Referer",
+                    "Cookie",
+                    "Sec-Fetch-Site",
+                    "Sec-Fetch-Mode",
+                    "Sec-Fetch-Dest"
+                  ],
+                  "set": {
+                    "Authorization": "Bearer sk-o2xkyQjlyHrfWiSBEJM-Yw"
+                  }
+                }
+              },
+              "file-logger": {
+                "path": "/usr/local/apisix/logs/billing/llm-litellm-chat.log"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              },
+              "billing-extractor": {
+                "provider": "openai",
+                "endpoint": "chat"
+              },
+              "response-wiretap": {
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-litellm-chat.jsonl",
+                "enabled": true
+              },
+              "provider-response-id": {},
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "request-id": {
+                "include_in_response": true,
+                "header_name": "X-Request-Id"
+              }
+            },
+            "update_time": 1772033300,
+            "uri": "/llm/litellm/v1/chat/completions",
+            "create_time": 1770967776
+          },
+          "createdIndex": 22,
+          "modifiedIndex": 750,
+          "key": "/apisix/routes/llm-litellm-chat"
+        },
+        {
+          "value": {
+            "id": "llm-litellm-models",
+            "methods": [
+              "GET",
+              "OPTIONS"
+            ],
+            "upstream": {
+              "type": "roundrobin",
+              "nodes": {
+                "anast.ita.chalmers.se:4000": 1
+              },
+              "scheme": "https",
+              "pass_host": "node"
+            },
+            "name": "llm-litellm-models",
+            "plugins": {
+              "auth-transform": {
+                "sanitize_request_ids": true,
+                "mode": "bearer_to_api_key"
+              },
+              "cors": {
+                "allow_origins": "*",
+                "max_age": 3600,
+                "allow_methods": "GET,OPTIONS",
+                "expose_headers": "X-Request-Id",
+                "allow_headers": "Authorization,Content-Type,X-Request-Id"
+              },
+              "proxy-rewrite": {
+                "uri": "/v1/models",
+                "headers": {
+                  "set": {
+                    "Authorization": "Bearer sk-o2xkyQjlyHrfWiSBEJM-Yw"
+                  }
+                }
+              },
+              "request-id": {
+                "include_in_response": true,
+                "header_name": "X-Request-Id"
+              },
+              "openai-auth": {
+                "header": "x-api-key",
+                "hide_credentials": true
+              }
+            },
+            "update_time": 1772033300,
+            "uri": "/llm/litellm/v1/models",
+            "create_time": 1770967776
+          },
+          "createdIndex": 23,
+          "modifiedIndex": 751,
+          "key": "/apisix/routes/llm-litellm-models"
+        },
+        {
+          "value": {
+            "id": "portal-oidc-route",
+            "methods": [
+              "GET",
+              "POST",
+              "HEAD"
+            ],
+            "plugins": {
+              "openid-connect": {
+                "scope": "openid profile email",
+                "set_access_token_header": true,
+                "bearer_only": false,
+                "session": {
+                  "secret": "a20364a199ab6464f98e8b22918f128f"
+                },
+                "redirect_uri": "https://lamassu.ita.chalmers.se/portal/callback",
+                "client_secret": "olF8Q~PNwminwvqK3ppFcMPpd4QApW2zb3siya81",
+                "ssl_verify": true,
+                "set_id_token_header": true,
+                "client_id": "02566484-f5ad-46ce-8e7e-5a667289dd8f",
+                "discovery": "https://login.microsoftonline.com/29147a65-536d-43f9-b802-e0a1b5cf9dbf/v2.0/.well-known/openid-configuration",
+                "set_userinfo_header": true,
+                "timeout": 3
+              }
+            },
+            "upstream": {
+              "type": "roundrobin",
+              "nodes": {
+                "gw-dev-portal-portal-1:3000": 1
+              }
+            },
+            "update_time": 1772524908,
+            "uris": [
+              "/portal/",
+              "/portal/*"
+            ],
+            "create_time": 1770967776
+          },
+          "createdIndex": 20,
+          "modifiedIndex": 875,
+          "key": "/apisix/routes/portal-oidc-route"
+        },
+        {
+          "value": {
+            "id": "portal-redirect-route",
+            "plugins": {
+              "redirect": {
+                "uri": "/portal/",
+                "ret_code": 302
+              }
+            },
+            "methods": [
+              "GET",
+              "HEAD"
+            ],
+            "update_time": 1772524908,
+            "uri": "/portal",
+            "create_time": 1770967776
+          },
+          "createdIndex": 19,
+          "modifiedIndex": 874,
+          "key": "/apisix/routes/portal-redirect-route"
+        },
+        {
+          "value": {
+            "id": "root-redirect-route",
+            "plugins": {
+              "redirect": {
+                "uri": "/portal/",
+                "ret_code": 302
+              }
+            },
+            "methods": [
+              "GET",
+              "HEAD"
+            ],
+            "update_time": 1772524908,
+            "uri": "/",
+            "create_time": 1770967776
+          },
+          "createdIndex": 21,
+          "modifiedIndex": 876,
+          "key": "/apisix/routes/root-redirect-route"
+        }
+      ],
+      "total": 15
+    }
+  }
+}

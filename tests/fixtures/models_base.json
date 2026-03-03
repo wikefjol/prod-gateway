@@ -1,0 +1,78 @@
+{
+  "captured_at": "2026-03-03T11:15:46.191060+00:00",
+  "gateway_revision": "09f9837",
+  "request": {
+    "method": "GET",
+    "path": "/llm/ai-proxy/v1/models"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "content-type": "application/json",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "server": "APISIX/3.15.0",
+      "x-gateway-revision": "unknown",
+      "x-request-id": "6b134ab2-51fd-4910-a298-9fcfea129dd9",
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET,OPTIONS",
+      "access-control-max-age": "3600",
+      "access-control-expose-headers": "X-Request-Id",
+      "access-control-allow-headers": "Authorization,Content-Type,X-Request-Id"
+    },
+    "body": {
+      "data": [
+        {
+          "id": "gpt-4o-mini",
+          "owned_by": "system",
+          "created": 1721172741,
+          "object": "model"
+        },
+        {
+          "id": "gpt-3.5-turbo-0125",
+          "owned_by": "openai",
+          "created": 1677610602,
+          "object": "model"
+        },
+        {
+          "id": "claude-3-haiku-20240307",
+          "owned_by": "anthropic",
+          "created": 1709769600,
+          "object": "model"
+        },
+        {
+          "id": "claude-haiku-4-5",
+          "owned_by": "anthropic",
+          "created": 1759276800,
+          "object": "model"
+        },
+        {
+          "id": "qwen3-coder-30b",
+          "owned_by": "c3se",
+          "created": 1772523400,
+          "object": "model"
+        },
+        {
+          "id": "gemma-3-12b-it",
+          "owned_by": "c3se",
+          "created": 1772523401,
+          "object": "model"
+        },
+        {
+          "id": "gpt-oss-20b",
+          "owned_by": "c3se",
+          "created": 1772523402,
+          "object": "model"
+        },
+        {
+          "id": "nomic-embed-text-v1.5",
+          "owned_by": "c3se",
+          "created": 1772523403,
+          "object": "model"
+        }
+      ],
+      "object": "list"
+    }
+  }
+}

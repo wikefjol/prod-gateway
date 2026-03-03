@@ -1,0 +1,30 @@
+{
+  "captured_at": "2026-03-03T11:15:46.209236+00:00",
+  "gateway_revision": "09f9837",
+  "request": {
+    "method": "POST",
+    "path": "/llm/ai-proxy/v1/chat/completions",
+    "body": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "date": "Tue, 03 Mar 2026 11:15:46 GMT",
+      "content-type": "text/plain; charset=utf-8",
+      "transfer-encoding": "chunked",
+      "connection": "keep-alive",
+      "server": "APISIX/3.15.0",
+      "x-gateway-revision": "unknown"
+    },
+    "body": {
+      "error_msg": "404 Route Not Found"
+    }
+  }
+}
