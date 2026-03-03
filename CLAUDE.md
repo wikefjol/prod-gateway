@@ -48,10 +48,11 @@ Dev ports: 9080 gateway · 9180 admin · 3001 portal
 ```
 tests/
 ├── conftest.py          # fixtures: base_client, premium_client, openai_*_client, admin_client, load_fixture
-├── pytest.ini           # markers: smoke, live, vllm
+├── pytest.ini           # markers: smoke, live, vllm, perf
 ├── requirements.txt     # httpx, pytest, pytest-asyncio, openai
 ├── fixtures/            # JSON snapshots from capture/record.py
-└── capture/record.py    # probe live gateway → save fixtures (idempotent)
+├── capture/record.py    # probe live gateway → save fixtures (idempotent)
+└── performance/         # streaming latency benchmarks (manual, PERF_ITERATIONS=N)
 ```
 Run: `tests/.venv/bin/pytest tests/` · Capture: `tests/.venv/bin/python tests/capture/record.py`
 Keys: deterministic dev-only from `services/apisix/test-consumers/` (test-key-base-1, test-key-premium-1)
@@ -74,8 +75,8 @@ YOU MUST NOT proceed without an ADR when implementation deviates from establishe
 - Diagrams: docs/diagrams/
 
 ## Current Focus
-- Active: #60 gateway test suite — `gh issue view 60` for task list
-- Last completed: #57 add Alvis vLLM models (Mar 2026)
+- Active: #61 CI/CD pipeline setup
+- Last completed: #60 gateway test suite (Mar 2026)
 
 ## Gotchas
 - ADMIN_KEY must be set before any ctl command (export or infra/env/.env.local)
