@@ -350,6 +350,7 @@ for r in d.get('list',[]):
     ;;
 
   bootstrap)
+    export GIT_SHA="${GIT_SHA:-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
     "$ROOT/services/apisix/scripts/bootstrap.sh" ${CLEAN_MODE:+--clean} "$@" || echo "Bootstrap failed"
     ;;
 
