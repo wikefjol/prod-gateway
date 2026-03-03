@@ -6,7 +6,8 @@ Architecture reference for the LLM API Gateway. See `docs/diagrams/` for visual 
 
 | Path | Route | Key Plugins | Upstream |
 |------|-------|-------------|----------|
-| `/llm/ai-proxy/v1/*` | ai-proxy | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | OpenAI / Anthropic (model-based) |
+| `/llm/ai-proxy/v1/*` | ai-proxy | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | OpenAI / Anthropic / Alvis vLLM (model-based) |
+| `/llm/ai-proxy/v1/embeddings` | ai-proxy-embed | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | Alvis vLLM (model-based) |
 | `/llm/claude-code/v1/*` | claude-code | auth-transform → key-auth → consumer-restriction → billing-extractor | Anthropic direct |
 
 ## Auth Flow
@@ -41,6 +42,12 @@ POST /llm/ai-proxy/v1/chat/completions {"model": "gpt-4o-mini"}
 
 POST /llm/ai-proxy/v1/chat/completions {"model": "claude-haiku-4-5"}
   → vars: [["post_arg.model", "~~", "^claude"]] → Anthropic
+
+POST /llm/ai-proxy/v1/chat/completions {"model": "qwen3-coder-30b"}
+  → vars: [["post_arg.model", "==", "qwen3-coder-30b"]] → Alvis vLLM (openai-compatible)
+
+POST /llm/ai-proxy/v1/embeddings {"model": "nomic-embed-text-v1.5"}
+  → vars: [["post_arg.model", "==", "nomic-embed-text-v1.5"]] → Alvis vLLM (openai-compatible)
 ```
 
 `post_arg.*` support requires APISIX 3.14+ (current: 3.15.0-debian). Unknown models rejected by `model-policy` with 400.
@@ -61,7 +68,7 @@ Clients always send/receive OpenAI-format regardless of backend provider.
 
 ## Upstream Config & Key Injection
 
-Upstreams are defined per-route in `ai-proxy` plugin config (no shared upstream objects). API keys injected at bootstrap time via `envsubst`:
+Upstreams are defined per-route in `ai-proxy` plugin config (no shared upstream objects). Alvis vLLM routes use `openai-compatible` provider with hardcoded endpoints (no API key, same VLAN). Commercial provider keys injected at bootstrap time via `envsubst`:
 
 1. Keys in `infra/env/.env.dev`: `ANTHROPIC_API_KEY=...`, `OPENAI_API_KEY=...`
 2. `bootstrap.sh` runs `envsubst < route.json` before PUT to Admin API

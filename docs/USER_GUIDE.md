@@ -1,6 +1,6 @@
 # LLM Gateway User Guide
 
-API gateway providing unified access to Anthropic and OpenAI with authentication and rate limiting.
+API gateway providing unified access to Anthropic, OpenAI, and Alvis vLLM (C3SE HPC) with authentication and rate limiting.
 
 ## Getting Started
 
@@ -35,6 +35,7 @@ Authorization: Bearer <your-key>
 | Use Case | Base URL | Protocol |
 |----------|----------|----------|
 | ai-proxy (all models) | `/llm/ai-proxy/v1` | OpenAI-compatible |
+| Embeddings | `/llm/ai-proxy/v1` | OpenAI-compatible |
 | Claude Code sidecar | `/llm/claude-code/v1` | Anthropic native |
 
 Full URLs use base `https://lamassu.ita.chalmers.se`.
@@ -45,7 +46,7 @@ Full URLs use base `https://lamassu.ita.chalmers.se`.
 
 | Group | Models | Rate Limit |
 |-------|--------|------------|
-| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-haiku-4-5 | 1M req/week |
+| `base_user` | gpt-4o-mini, gpt-3.5-turbo-0125, claude-haiku-4-5, qwen3-coder-30b, gemma-3-12b-it, gpt-oss-20b, nomic-embed-text-v1.5 | 1M req/week |
 | `premium_user` | All models | 1M req/week |
 | `claude_code_users` | All models + Claude Code sidecar | 1M req/week |
 
@@ -115,6 +116,18 @@ curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{"model": "claude-haiku-4-5", "messages": [{"role": "user", "content": "Hello"}]}'
+
+# Alvis vLLM model (same endpoint)
+curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
+  -H "Authorization: Bearer <your-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3-coder-30b", "messages": [{"role": "user", "content": "Hello"}]}'
+
+# Embeddings
+curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/embeddings \
+  -H "Authorization: Bearer <your-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "nomic-embed-text-v1.5", "input": "Hello world"}'
 ```
 
 ## Common Headers

@@ -32,6 +32,11 @@ local MODEL_REGISTRY = {
     { id = "claude-sonnet-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
     { id = "claude-opus-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
     { id = "claude-haiku-4-5", provider = "anthropic", owned_by = "anthropic", created = 1759276800 },
+    -- Alvis vLLM (C3SE HPC)
+    { id = "qwen3-coder-30b",       provider = "alvis", owned_by = "c3se", created = 1772523400 },
+    { id = "gemma-3-12b-it",        provider = "alvis", owned_by = "c3se", created = 1772523401 },
+    { id = "gpt-oss-20b",           provider = "alvis", owned_by = "c3se", created = 1772523402 },
+    { id = "nomic-embed-text-v1.5", provider = "alvis", owned_by = "c3se", created = 1772523403 },
 }
 
 -- Access control: models allowed per consumer group
@@ -42,6 +47,10 @@ local ALLOWED_MODELS_BY_GROUP = {
         "gpt-3.5-turbo-0125",
         "claude-3-haiku-20240307",
         "claude-haiku-4-5",
+        "qwen3-coder-30b",
+        "gemma-3-12b-it",
+        "gpt-oss-20b",
+        "nomic-embed-text-v1.5",
     },
     premium_user = "*",  -- All models
     claude_code_users = "*",  -- For sidecar

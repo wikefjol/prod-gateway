@@ -98,6 +98,11 @@ LLM_ROUTES=(
   "llm-ai-proxy-chat-openai.json"
   "llm-ai-proxy-chat-anthropic.json"
   "llm-ai-proxy-models.json"
+  # Alvis vLLM (C3SE HPC, no API key)
+  "llm-ai-proxy-chat-vllm-qwen3.json"
+  "llm-ai-proxy-chat-vllm-gemma.json"
+  "llm-ai-proxy-chat-vllm-gptoss.json"
+  "llm-ai-proxy-embed-vllm-nomic.json"
   # Claude Code sidecar (native Anthropic, restricted to claude_code_users)
   "llm-claude-code-messages.json"
   "llm-claude-code-count-tokens.json"

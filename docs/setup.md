@@ -41,9 +41,17 @@ Required before any `ctl.sh` command. Two options:
 **Apache2 reverse proxy** (system-level, outside repo):
 `/etc/apache2/sites-available/ai-gateway-portal-chalmers.conf`
 
-## Local vLLM Endpoints
+## Alvis vLLM Endpoints (C3SE HPC)
 
-- `alvis-worker1.c3se.chalmers.se`
-- `alvis-worker2.c3se.chalmers.se`
+Hardcoded in route JSON files (no env vars needed — same VLAN, no auth):
+
+| Model | Endpoint |
+|-------|----------|
+| qwen3-coder-30b | `http://alvis-worker1.c3se.chalmers.se:43181/v1/chat/completions` |
+| gemma-3-12b-it | `http://alvis-worker1.c3se.chalmers.se:43111/v1/chat/completions` |
+| gpt-oss-20b | `http://alvis-worker1.c3se.chalmers.se:43121/v1/chat/completions` |
+| nomic-embed-text-v1.5 | `http://alvis-worker1.c3se.chalmers.se:43211/v1/embeddings` |
+
+Gateway aliases are remapped to HuggingFace names via `ai-proxy` `options.model`.
 
 Contact: Mikael Öhman (see email thread for access details and endpoint paths).
