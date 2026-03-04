@@ -1,7 +1,11 @@
 # Environment files with secrets
+.env
+.env.*
+*.env
 infra/env/.env.*
 secrets/
 .secrets/
+config/
 
 # Logs
 logs/
