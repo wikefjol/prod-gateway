@@ -38,11 +38,13 @@ infra/
 ## Commands
 
 ```bash
-./infra/ctl/ctl.sh dev           # Build + start + bootstrap
-./infra/ctl/ctl.sh dev --no-cache # Force rebuild
-./infra/ctl/ctl.sh down          # Stop
-./infra/ctl/ctl.sh logs -f       # Follow logs
-./infra/ctl/ctl.sh routes        # List routes
+./infra/ctl/ctl.sh dev              # Build + start + bootstrap + verify
+./infra/ctl/ctl.sh dev --no-cache   # Force rebuild (no layer cache)
+./infra/ctl/ctl.sh up portal --build # Rebuild + start single service
+./infra/ctl/ctl.sh rebuild portal   # --no-cache build + restart
+./infra/ctl/ctl.sh down             # Stop
+./infra/ctl/ctl.sh logs -f          # Follow logs
+./infra/ctl/ctl.sh routes           # List routes
 ```
 
 ## Setup

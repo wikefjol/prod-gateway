@@ -4,8 +4,11 @@ LLM API gateway (Apache APISIX) — auth, rate-limiting, billing, self-service p
 ## Commands
 ```
 ./infra/ctl/ctl.sh dev              # build + start + bootstrap + verify
+./infra/ctl/ctl.sh up [svc]         # start (no build, uses cached image)
+./infra/ctl/ctl.sh up [svc] --build # start + rebuild (cached layers)
 ./infra/ctl/ctl.sh up --clean       # fresh etcd state (prompts DELETE)
 ./infra/ctl/ctl.sh down [--clean]   # stop [+ remove volumes]
+./infra/ctl/ctl.sh rebuild [svc]    # --no-cache build + restart
 ./infra/ctl/ctl.sh bootstrap [--clean]
 ./infra/ctl/ctl.sh logs -f | routes | shell
 ```
