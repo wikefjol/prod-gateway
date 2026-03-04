@@ -1,0 +1,46 @@
+services:
+  swag:
+    image: lscr.io/linuxserver/swag:5.3.1
+    container_name: gw-swag
+    cap_add: []
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Europe/Stockholm"
+      URL: "ita.chalmers.se"
+      SUBDOMAINS: "lamassu"
+      ONLY_SUBDOMAINS: "true"
+      EXTRA_DOMAINS: "ai-gateway.portal.chalmers.se,openwebui.portal.chalmers.se"
+      VALIDATION: "http"
+      EMAIL: "${SWAG_EMAIL}"
+      STAGING: "${SWAG_STAGING:-false}"
+      DISABLE_F2B: "true"
+    volumes:
+      - swag_config:/config
+      - ./nginx/proxy-confs/lamassu.subdomain.conf:/config/nginx/proxy-confs/lamassu.subdomain.conf:ro
+      - ./nginx/proxy-confs/ai-gateway-portal.subdomain.conf:/config/nginx/proxy-confs/ai-gateway-portal.subdomain.conf:ro
+      - ./nginx/site-confs/default.conf:/config/nginx/site-confs/default.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      apisix-dev:
+      apisix-test:
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  apisix-dev:
+    name: apisix-dev
+    external: true
+  apisix-test:
+    name: apisix-test
+    external: true
+
+volumes:
+  swag_config: {}
