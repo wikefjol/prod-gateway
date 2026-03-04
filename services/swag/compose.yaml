@@ -17,9 +17,9 @@ services:
       DISABLE_F2B: "true"
     volumes:
       - swag_config:/config
-      - ./nginx/proxy-confs/lamassu.subdomain.conf:/config/nginx/proxy-confs/lamassu.subdomain.conf
-      - ./nginx/proxy-confs/ai-gateway-portal.subdomain.conf:/config/nginx/proxy-confs/ai-gateway-portal.subdomain.conf
       - ./nginx/site-confs/default.conf:/config/nginx/site-confs/default.conf
+      - ./nginx/site-confs/lamassu.subdomain.conf:/config/nginx/site-confs/lamassu.subdomain.conf
+      - ./nginx/site-confs/ai-gateway-portal.subdomain.conf:/config/nginx/site-confs/ai-gateway-portal.subdomain.conf
     ports:
       - "80:80"
       - "443:443"
@@ -28,7 +28,7 @@ services:
       apisix-test:
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fk", "https://localhost"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3

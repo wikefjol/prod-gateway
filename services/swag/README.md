@@ -59,6 +59,6 @@ sudo systemctl start apache2
 
 ## Adding a New Domain
 
-1. Create `nginx/proxy-confs/<name>.subdomain.conf`
+1. Create `nginx/site-confs/<name>.subdomain.conf`
 2. Add domain to `EXTRA_DOMAINS` in `compose.yaml`
 3. Restart SWAG: `./infra/ctl/ctl.sh down swag && ./infra/ctl/ctl.sh up swag`
