@@ -38,7 +38,7 @@ shift || true
 
 # Service argument (optional - defaults to all for up/down, required for some commands)
 SVC="${1:-}"
-[[ "$SVC" =~ ^(apisix|portal)$ ]] && shift || SVC=""
+[[ "$SVC" =~ ^(apisix|portal|swag)$ ]] && shift || SVC=""
 
 ENV_FILE="$INFRA/env/.env.$ENV_NAME"
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -143,6 +143,23 @@ assert_revision() {
   echo "Revision verified: $actual"
 }
 
+# SWAG health polling
+wait_for_swag() {
+  local timeout="${1:-120}"
+  local start=$SECONDS
+  echo "Waiting for SWAG healthy (${timeout}s timeout)..."
+  while (( SECONDS - start < timeout )); do
+    if curl -sfk "https://localhost" >/dev/null 2>&1; then
+      echo "SWAG healthy after $((SECONDS - start))s"
+      return 0
+    fi
+    sleep 3
+  done
+  echo "ERROR: SWAG health check timeout after ${timeout}s" >&2
+  dc swag logs --tail=50
+  return 1
+}
+
 # Start service(s)
 cmd_up() {
   local services=("${@:-${CORE_SERVICES[@]}}")
@@ -185,12 +202,13 @@ cmd_rebuild() {
 
 # Dev command - canonical way to get to known-good state
 cmd_dev() {
-  local no_cache="" nuke="" with_portal=""
+  local no_cache="" nuke="" with_portal="" with_swag=""
   for arg in "$@"; do
     case "$arg" in
       --no-cache) no_cache="1" ;;
       --nuke) nuke="1" ;;
       --with-portal) with_portal="1" ;;
+      --with-swag) with_swag="1" ;;
     esac
   done
 
@@ -202,10 +220,11 @@ cmd_dev() {
   print_git_info
   ensure_network
 
-  # Stop apisix only (not portal) unless --with-portal
+  # Stop apisix only (not portal/swag) unless flagged
   echo "Stopping apisix..."
   dc apisix down --remove-orphans 2>/dev/null || true
   [[ -n "$with_portal" ]] && { dc portal down --remove-orphans 2>/dev/null || true; }
+  [[ -n "$with_swag" ]] && { dc swag down --remove-orphans 2>/dev/null || true; }
 
   if [[ -n "$nuke" ]]; then
     echo "NUKE MODE: will delete etcd data (fresh state)"
@@ -224,6 +243,7 @@ cmd_dev() {
   echo "Starting apisix..."
   dc apisix up -d --force-recreate --remove-orphans
   [[ -n "$with_portal" ]] && dc portal up -d --force-recreate --remove-orphans
+  [[ -n "$with_swag" ]] && dc swag up -d --force-recreate --remove-orphans
 
   # Wait for healthy (portable polling, not --wait)
   if ! wait_for_healthy 90; then
@@ -237,6 +257,13 @@ cmd_dev() {
   # Assert revision matches (ghost killer)
   if ! assert_revision "$git_sha"; then
     exit 1
+  fi
+
+  # Wait for SWAG if started
+  if [[ -n "$with_swag" ]]; then
+    if ! wait_for_swag 120; then
+      exit 1
+    fi
   fi
 
   echo "=== Ready ==="
@@ -309,7 +336,7 @@ case "$CMD" in
     ;;
 
   ps|status)
-    for svc in "${CORE_SERVICES[@]}"; do
+    for svc in "${CORE_SERVICES[@]}" swag; do
       echo "=== $svc ==="
       dc "$svc" ps 2>/dev/null || echo "(not running)"
     done
@@ -364,6 +391,7 @@ Usage: ./infra/ctl/ctl.sh [command] [service] [options]
   dev                 Build + start + bootstrap + verify revision
                       --no-cache     Force fresh build (cache-bust)
                       --with-portal  Also manage portal service
+                      --with-swag    Also manage SWAG reverse proxy
                       --nuke         Delete etcd volume (fresh state, DELETE confirm)
 
 === Other Commands ===
@@ -396,7 +424,9 @@ Examples:
   ./infra/ctl/ctl.sh dev                   # Build + start + bootstrap + verify
   ./infra/ctl/ctl.sh dev --no-cache        # Cache-bust build
   ./infra/ctl/ctl.sh dev --with-portal     # Full stack
+  ./infra/ctl/ctl.sh dev --with-swag       # Include SWAG reverse proxy
   ./infra/ctl/ctl.sh dev --nuke            # Fresh etcd state
+  ./infra/ctl/ctl.sh up swag               # Start SWAG only
   ./infra/ctl/ctl.sh logs apisix -f        # Follow apisix logs
 EOF
     ;;

@@ -13,17 +13,18 @@ Add `--test`/`-t` for test env (ports 9081/9181).
 
 ## Architecture
 Repo: wikefjol/prod-gateway
-Stack: Apache APISIX + Lua plugins, Flask portal, Docker Compose, external CORE_NET
+Stack: Apache APISIX + Lua plugins, Flask portal, SWAG reverse proxy, Docker Compose, external CORE_NET
 ```
 services/
 ├── apisix/   # gateway, config, routes, Lua plugins
-└── portal/   # Flask self-service key management
+├── portal/   # Flask self-service key management
+└── swag/     # SWAG reverse proxy (nginx + certbot), TLS termination
 infra/
 ├── env/      # .env.dev, .env.test
 └── ctl/      # ctl.sh
 docs/         # ADRs, architecture, user guide, diagrams
 ```
-Request flow: Client → Apache2 → APISIX (auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id → file-logger) → Upstream
+Request flow: Client → SWAG (TLS) → APISIX (auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id → file-logger) → Upstream
 Dev ports: 9080 gateway · 9180 admin · 3001 portal
 
 ## Code Style
@@ -61,11 +62,11 @@ YOU MUST NOT proceed without an ADR when implementation deviates from establishe
 - Diagrams: docs/diagrams/
 
 ## Current Focus
-- Active: #61 CI/CD pipeline setup
+- Active: #61 CI/CD pipeline setup, #39 SWAG migration
 - Last completed: #60 gateway test suite (Mar 2026)
 
 ## Gotchas
 - ADMIN_KEY must be set before any ctl command (export or infra/env/.env.local)
 - stream-usage-injector.lua is INACTIVE (not loaded in config.yaml)
-- Apache2 vhost is system-level, outside repo: /etc/apache2/sites-available/ai-gateway-portal-chalmers.conf
+- SWAG reverse proxy in `services/swag/` replaces former Apache2 (ADR-008); only container exposing 80/443
 - After `dev`, verify X-Gateway-Revision == git rev-parse --short HEAD
