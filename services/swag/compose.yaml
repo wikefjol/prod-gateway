@@ -17,9 +17,9 @@ services:
       DISABLE_F2B: "true"
     volumes:
       - swag_config:/config
-      - ./nginx/proxy-confs/lamassu.subdomain.conf:/config/nginx/proxy-confs/lamassu.subdomain.conf:ro
-      - ./nginx/proxy-confs/ai-gateway-portal.subdomain.conf:/config/nginx/proxy-confs/ai-gateway-portal.subdomain.conf:ro
-      - ./nginx/site-confs/default.conf:/config/nginx/site-confs/default.conf:ro
+      - ./nginx/proxy-confs/lamassu.subdomain.conf:/config/nginx/proxy-confs/lamassu.subdomain.conf
+      - ./nginx/proxy-confs/ai-gateway-portal.subdomain.conf:/config/nginx/proxy-confs/ai-gateway-portal.subdomain.conf
+      - ./nginx/site-confs/default.conf:/config/nginx/site-confs/default.conf
     ports:
       - "80:80"
       - "443:443"
