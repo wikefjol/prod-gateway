@@ -25,6 +25,7 @@ Required before any `ctl.sh` command. Two options:
 | `APISIX_GATEWAY_PORT` | Override gateway port (default 9080 / 9081 test) |
 | `APISIX_ADMIN_PORT` | Override admin port (default 9180 / 9181 test) |
 | `PORTAL_PORT` | Override portal port (default 3001) |
+| `SWAG_EMAIL` | Let's Encrypt notification email (SWAG) |
 
 ## Bootstrap Mechanism
 
@@ -38,8 +39,23 @@ Required before any `ctl.sh` command. Two options:
 
 **Production:** Lamassu
 
-**Apache2 reverse proxy** (system-level, outside repo):
-`/etc/apache2/sites-available/ai-gateway-portal-chalmers.conf`
+### SWAG Reverse Proxy
+
+SWAG handles TLS termination and domain routing. Config in `services/swag/`.
+
+```bash
+# Start SWAG (requires ports 80/443 free)
+./infra/ctl/ctl.sh up swag
+
+# Or include in dev workflow
+./infra/ctl/ctl.sh dev --with-swag
+```
+
+Set `SWAG_EMAIL` in `infra/env/.env.dev` for Let's Encrypt notifications.
+
+First run: set `SWAG_STAGING=true` to test with staging certs. See [services/swag/README.md](../services/swag/README.md) for full cutover runbook.
+
+**Note:** Former Apache2 reverse proxy (`/etc/apache2/sites-available/`) replaced by SWAG (ADR-008).
 
 ## Alvis vLLM Endpoints (C3SE HPC)
 
