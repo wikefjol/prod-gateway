@@ -162,11 +162,30 @@ wait_for_swag() {
 
 # Start service(s)
 cmd_up() {
-  local services=("${@:-${CORE_SERVICES[@]}}")
+  local build_flag="" no_cache=""
+  local services=()
+  for arg in "$@"; do
+    case "$arg" in
+      --build) build_flag="--build" ;;
+      --no-cache) no_cache="1" ;;
+      *) services+=("$arg") ;;
+    esac
+  done
+  [[ ${#services[@]} -eq 0 ]] && services=("${CORE_SERVICES[@]}")
+
+  # --no-cache requires explicit build first (compose up doesn't support it)
+  if [[ -n "$no_cache" ]]; then
+    for svc in "${services[@]}"; do
+      echo "Building $svc (no cache)..."
+      dc "$svc" build --pull --no-cache
+    done
+    build_flag=""
+  fi
+
   ensure_network
   for svc in "${services[@]}"; do
     echo "Starting $svc..."
-    dc "$svc" up -d --force-recreate --remove-orphans
+    dc "$svc" up -d --force-recreate --remove-orphans $build_flag
     echo "✅ $svc started"
   done
 }
@@ -279,9 +298,9 @@ case "$CMD" in
       dc apisix down -v --remove-orphans 2>/dev/null || true
     fi
     if [[ -n "$SVC" ]]; then
-      cmd_up "$SVC"
+      cmd_up "$SVC" "$@"
     else
-      cmd_up "${CORE_SERVICES[@]}"
+      cmd_up "${CORE_SERVICES[@]}" "$@"
     fi
     echo "Gateway ready. Admin: http://localhost:${APISIX_ADMIN_PORT:-9180}"
     ;;
@@ -378,7 +397,7 @@ for r in d.get('list',[]):
 
   bootstrap)
     export GIT_SHA="${GIT_SHA:-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)}"
-    "$ROOT/services/apisix/scripts/bootstrap.sh" ${CLEAN_MODE:+--clean} "$@" || echo "Bootstrap failed"
+    "$ROOT/services/apisix/scripts/bootstrap.sh" ${CLEAN_MODE:+--clean} "$ENV_NAME" "$@" || echo "Bootstrap failed"
     ;;
 
   help|*)
