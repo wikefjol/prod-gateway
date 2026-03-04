@@ -2,6 +2,24 @@
 
 Architecture reference for the LLM API Gateway. See `docs/diagrams/` for visual flows.
 
+## Reverse Proxy (SWAG)
+
+SWAG (nginx + certbot) terminates TLS and routes by domain. See [ADR-008](adr/008-swag-reverse-proxy.md).
+
+```
+Client → SWAG (TLS termination) → APISIX → Upstream
+```
+
+| Domain | Backend | Network |
+|--------|---------|---------|
+| `lamassu.ita.chalmers.se` | dev APISIX | `apisix-dev` |
+| `ai-gateway.portal.chalmers.se` | test APISIX | `apisix-test` |
+| `openwebui.portal.chalmers.se` | OpenWebUI | TBD (#40) |
+
+SWAG is the only container exposing ports 80/443. All other services bind `127.0.0.1` only.
+
+Config: `services/swag/` — see [services/swag/README.md](../services/swag/README.md) for cutover runbook.
+
 ## Routing Paths
 
 | Path | Route | Key Plugins | Upstream |
