@@ -17,6 +17,7 @@ services:
       DISABLE_F2B: "true"
     volumes:
       - swag_config:/config
+      - ./nginx/proxy.conf:/config/nginx/proxy.conf
       - ./nginx/site-confs/default.conf:/config/nginx/site-confs/default.conf
       - ./nginx/site-confs/lamassu.subdomain.conf:/config/nginx/site-confs/lamassu.subdomain.conf
       - ./nginx/site-confs/ai-gateway-portal.subdomain.conf:/config/nginx/site-confs/ai-gateway-portal.subdomain.conf
