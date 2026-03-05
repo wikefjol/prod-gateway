@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Gateway Portal{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/portal/static/css/style.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="/portal/" class="logo-chip">
+            <span class="logo-icon">AI</span>
+            Gateway
+        </a>
+        <div class="nav-links">
+            <a href="/portal/" class="nav-link">Keys</a>
+            <a href="/portal/test" class="nav-link">Test</a>
+            <a href="/docs/" class="nav-link">Docs</a>
+        </div>
+        <div class="nav-spacer"></div>
+        {% if user_identity %}
+        <span class="user-chip">{{ user_identity.user_email }}</span>
+        {% endif %}
+    </nav>
+
+    <div class="page-container">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    {% block config_script %}{% endblock %}
+    <script src="/portal/static/js/portal.js"></script>
+</body>
+</html>
