@@ -38,7 +38,7 @@ shift || true
 
 # Service argument (optional - defaults to all for up/down, required for some commands)
 SVC="${1:-}"
-[[ "$SVC" =~ ^(apisix|portal|swag)$ ]] && shift || SVC=""
+[[ "$SVC" =~ ^(apisix|portal|swag|docs)$ ]] && shift || SVC=""
 
 ENV_FILE="$INFRA/env/.env.$ENV_NAME"
 if [[ ! -f "$ENV_FILE" ]]; then

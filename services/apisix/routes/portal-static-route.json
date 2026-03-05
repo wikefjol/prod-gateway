@@ -1,0 +1,12 @@
+{
+  "id": "portal-static-route",
+  "uri": "/portal/static/*",
+  "name": "Portal static assets (no auth)",
+  "methods": ["GET", "HEAD"],
+  "upstream": {
+    "type": "roundrobin",
+    "nodes": {
+      "$PORTAL_BACKEND_HOST": 1
+    }
+  }
+}
