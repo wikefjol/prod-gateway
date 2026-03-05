@@ -618,30 +618,6 @@ def portal_dashboard():
         logger.error(f"Portal dashboard error: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.route('/portal/test')
-def portal_test():
-    """Test tool page — send a test request with your API key"""
-    try:
-        user_identity = portal_service.resolve_user_identity(dict(request.headers))
-        user_oid = user_identity['user_oid']
-        portal_service.ensure_consumer_exists(user_identity)
-        credentials = portal_service.apisix.get_consumer_credentials(user_oid)
-        has_key = len(credentials) > 0
-        current_key = credentials[0]['key'] if has_key else None
-
-        return render_template('test.html',
-                             user_identity=user_identity,
-                             has_key=has_key,
-                             current_key=current_key)
-
-    except ValueError as e:
-        logger.warning(f"Authentication error: {e}")
-        return jsonify({"error": "Authentication required", "details": str(e)}), 401
-
-    except Exception as e:
-        logger.error(f"Portal test page error: {e}")
-        return jsonify({"error": "Internal server error"}), 500
-
 @app.route('/portal/get-key', methods=['POST'])
 def get_api_key():
     """Get API key endpoint"""
