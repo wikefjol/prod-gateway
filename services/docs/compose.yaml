@@ -1,0 +1,29 @@
+services:
+  docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${DOCS_PORT:-3002}:8000"
+    networks:
+      apisix-dev:
+        aliases:
+          - docs
+      apisix-test:
+        aliases:
+          - docs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  apisix-dev:
+    name: apisix-dev
+    external: true
+  apisix-test:
+    name: apisix-test
+    external: true
