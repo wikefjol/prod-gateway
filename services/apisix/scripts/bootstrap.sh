@@ -83,6 +83,7 @@ CORE_ROUTES=(
   "health-route.json"
   "portal-redirect-route.json"
   "portal-static-route.json"
+  "docs-route.json"
   "oidc-generic-route.json"
   "root-redirect-route.json"
 )

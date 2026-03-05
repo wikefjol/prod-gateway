@@ -6,12 +6,7 @@ services:
     ports:
       - "127.0.0.1:${DOCS_PORT:-3002}:8000"
     networks:
-      apisix-dev:
-        aliases:
-          - docs
-      apisix-test:
-        aliases:
-          - docs
+      - core
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/docs/"]
@@ -21,9 +16,6 @@ services:
       start_period: 15s
 
 networks:
-  apisix-dev:
-    name: apisix-dev
-    external: true
-  apisix-test:
-    name: apisix-test
+  core:
+    name: ${CORE_NET}
     external: true
