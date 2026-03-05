@@ -74,6 +74,8 @@ require_cmd() {
 CORE_CONSUMER_GROUPS=(
   "base-user-group.json"
   "premium-user-group.json"
+  "students-MTM026-LP4-2026-group.json"
+  "teachers-MTM026-LP4-2026-group.json"
 )
 
 # Core routes (always deployed)

@@ -10,13 +10,12 @@ class TestModelsSmoke:
     def test_models_base_count(self, load_fixture):
         f = load_fixture("models_base.json")
         models = f["response"]["body"]["data"]
-        assert len(models) == 8
+        assert len(models) == len(BASE_ALLOWED)
 
     def test_models_base_ids(self, load_fixture):
         f = load_fixture("models_base.json")
         ids = {m["id"] for m in f["response"]["body"]["data"]}
-        # BASE_ALLOWED is chat-only (excludes nomic), but models endpoint includes it
-        expected = BASE_ALLOWED | {"nomic-embed-text-v1.5"}
+        expected = BASE_ALLOWED
         assert ids == expected
 
     def test_models_base_object_shape(self, load_fixture):

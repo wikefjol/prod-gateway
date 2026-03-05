@@ -1,6 +1,6 @@
 {
-  "captured_at": "2026-03-03T14:18:21.072672+00:00",
-  "gateway_revision": "49088bb",
+  "captured_at": "2026-03-05T12:00:00.000000+00:00",
+  "gateway_revision": "d4913e8",
   "request": {
     "method": "GET",
     "path": "/llm/ai-proxy/v1/models"
@@ -8,71 +8,28 @@
   "response": {
     "status": 200,
     "headers": {
-      "date": "Tue, 03 Mar 2026 14:18:21 GMT",
-      "content-type": "application/json",
-      "transfer-encoding": "chunked",
-      "connection": "keep-alive",
-      "server": "APISIX/3.15.0",
-      "x-gateway-revision": "unknown",
-      "x-request-id": "e6969a72-fd5f-4f62-9a60-68bd0dc87916",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,OPTIONS",
-      "access-control-max-age": "3600",
-      "access-control-expose-headers": "X-Request-Id",
-      "access-control-allow-headers": "Authorization,Content-Type,X-Request-Id"
+      "content-type": "application/json"
     },
     "body": {
+      "object": "list",
       "data": [
-        {
-          "id": "gpt-4o-mini",
-          "owned_by": "system",
-          "created": 1721172741,
-          "object": "model"
-        },
-        {
-          "id": "gpt-3.5-turbo-0125",
-          "owned_by": "openai",
-          "created": 1677610602,
-          "object": "model"
-        },
-        {
-          "id": "claude-3-haiku-20240307",
-          "owned_by": "anthropic",
-          "created": 1709769600,
-          "object": "model"
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "owned_by": "anthropic",
-          "created": 1759276800,
-          "object": "model"
-        },
-        {
-          "id": "qwen3-coder-30b",
-          "owned_by": "c3se",
-          "created": 1772523400,
-          "object": "model"
-        },
-        {
-          "id": "gemma-3-12b-it",
-          "owned_by": "c3se",
-          "created": 1772523401,
-          "object": "model"
-        },
-        {
-          "id": "gpt-oss-20b",
-          "owned_by": "c3se",
-          "created": 1772523402,
-          "object": "model"
-        },
-        {
-          "id": "nomic-embed-text-v1.5",
-          "owned_by": "c3se",
-          "created": 1772523403,
-          "object": "model"
-        }
-      ],
-      "object": "list"
+        { "id": "gpt-4o", "object": "model", "created": 1715367049, "owned_by": "system" },
+        { "id": "gpt-4o-mini", "object": "model", "created": 1721172741, "owned_by": "system" },
+        { "id": "gpt-4-turbo", "object": "model", "created": 1712361441, "owned_by": "system" },
+        { "id": "gpt-4", "object": "model", "created": 1687882411, "owned_by": "openai" },
+        { "id": "gpt-3.5-turbo-0125", "object": "model", "created": 1677610602, "owned_by": "openai" },
+        { "id": "claude-3-haiku-20240307", "object": "model", "created": 1709769600, "owned_by": "anthropic" },
+        { "id": "claude-sonnet-4-20250514", "object": "model", "created": 1747180800, "owned_by": "anthropic" },
+        { "id": "claude-opus-4-20250514", "object": "model", "created": 1747180800, "owned_by": "anthropic" },
+        { "id": "gpt-4.1-2025-04-14", "object": "model", "created": 1744588800, "owned_by": "system" },
+        { "id": "claude-sonnet-4-5", "object": "model", "created": 1759276800, "owned_by": "anthropic" },
+        { "id": "claude-opus-4-5", "object": "model", "created": 1759276800, "owned_by": "anthropic" },
+        { "id": "claude-haiku-4-5", "object": "model", "created": 1759276800, "owned_by": "anthropic" },
+        { "id": "qwen3-coder-30b", "object": "model", "created": 1772523400, "owned_by": "c3se" },
+        { "id": "gemma-3-12b-it", "object": "model", "created": 1772523401, "owned_by": "c3se" },
+        { "id": "gpt-oss-20b", "object": "model", "created": 1772523402, "owned_by": "c3se" },
+        { "id": "nomic-embed-text-v1.5", "object": "model", "created": 1772523403, "owned_by": "c3se" }
+      ]
     }
   }
 }
