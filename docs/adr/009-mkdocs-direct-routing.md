@@ -1,4 +1,4 @@
-# ADR-009: MkDocs Direct Routing via SWAG
+# ADR-009: MkDocs Docs Site via APISIX
 
 **Status:** Accepted
 **Date:** 2026-03-05
@@ -8,35 +8,38 @@
 200-300 students onboarding soon. Documentation lives in `docs/USER_GUIDE.md` — not searchable, not navigable, not linkable from the portal. Need a proper docs site before launch.
 
 Options for serving docs:
-1. Route through APISIX (like portal) — adds auth overhead, OIDC redirects for public content
-2. Route directly via SWAG — simple nginx proxy, no auth, public content
+1. Route through APISIX with OIDC (like portal) — same auth session, simpler routing
+2. Route directly via SWAG — separate nginx location, bypasses APISIX, public access
 
 ## Decision
 
-Serve MkDocs Material at `/docs/` via SWAG directly, bypassing APISIX entirely.
+Serve MkDocs Material at `/docs/` through APISIX with OIDC, same as the portal.
 
 - **New service:** `services/docs/` — MkDocs Material in a Docker container (`mkdocs serve`)
-- **Routing:** SWAG `location /docs/` block in both subdomain configs, before `location /`
-- **Networking:** Docs container joins both `apisix-dev` and `apisix-test` networks with alias `docs`
-- **No authentication:** Documentation is public content, no OIDC/key-auth needed
+- **Routing:** APISIX route `docs-route.json` with `openid-connect` plugin, upstream to docs container
+- **Networking:** Docs container joins `CORE_NET` (same as portal)
+- **Authentication:** Reuses the same OIDC session — students who hit `/portal/` are already authenticated for `/docs/`
+
+Initially considered SWAG direct routing (bypassing APISIX), but reverted because:
+- `/docs/` returned 404 from APISIX when SWAG didn't intercept it — confusing
+- All other user-facing paths go through APISIX + OIDC; docs being different adds complexity
+- One OIDC session covers portal + docs seamlessly
+- No need for separate SWAG location blocks or dual-network container setup
 
 ## Consequences
 
 **Easier:**
-- Docs are accessible without SSO login
-- No APISIX route/plugin configuration needed
-- MkDocs Material provides search, navigation, mobile support out of the box
-- Content is versioned in-repo as Markdown
+- Same routing pattern as portal — no special cases
+- Docs container on single network (`CORE_NET`), like portal
+- OIDC session shared with portal — no extra login
+- No SWAG config changes needed
 
 **Harder:**
-- Docs container must join both Docker networks (same pattern as SWAG itself)
+- Docs require SSO login (acceptable — students already sign in for portal)
 - `use_directory_urls` + `/docs/` prefix requires `site_url` config for correct internal links
-- Adding a new service to manage (lightweight — single Python process)
 
 ## Alternatives Considered
 
-**Route through APISIX:** Unnecessary complexity. Docs are public, don't need auth or rate limiting. Would require an APISIX route + upstream config for no benefit.
+**SWAG direct routing (tried, reverted):** Simpler in theory but created a routing split — some paths via SWAG, others via APISIX. Led to 404s and required docs container on both Docker networks.
 
-**Static files on SWAG:** Could build MkDocs and serve static files from SWAG volume. Loses live reload in dev and requires a build step. MkDocs serve is simple enough.
-
-**GitHub Pages / external hosting:** Content leaves the repo's deploy pipeline. Can't link bidirectionally with portal. Students need VPN or Chalmers network for other services anyway.
+**GitHub Pages / external hosting:** Content leaves the repo's deploy pipeline. Can't link bidirectionally with portal.
