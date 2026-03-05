@@ -107,7 +107,7 @@ def capture_access_matrix(gw_url: str) -> dict:
         for model in ALL_MODELS:
             try:
                 resp = httpx.post(
-                    f"{gw_url}/llm/ai-proxy/v1/chat/completions",
+                    f"{gw_url}/llm/openai/v1/chat/completions",
                     headers={"Authorization": f"Bearer {key}"},
                     json={
                         "model": model,
@@ -175,17 +175,17 @@ def main():
 
     # 2. Models (base)
     print("Capturing models (base)...")
-    f = capture_simple(base, "models_base.json", "GET", "/llm/ai-proxy/v1/models")
+    f = capture_simple(base, "models_base.json", "GET", "/llm/openai/v1/models")
     results.append(("models_base.json", f["response"]["status"]))
 
     # 3. Models (premium)
     print("Capturing models (premium)...")
-    f = capture_simple(premium, "models_premium.json", "GET", "/llm/ai-proxy/v1/models")
+    f = capture_simple(premium, "models_premium.json", "GET", "/llm/openai/v1/models")
     results.append(("models_premium.json", f["response"]["status"]))
 
     # 4. Models (no auth)
     print("Capturing models (no auth)...")
-    f = capture_simple(noauth, "models_noauth.json", "GET", "/llm/ai-proxy/v1/models")
+    f = capture_simple(noauth, "models_noauth.json", "GET", "/llm/openai/v1/models")
     results.append(("models_noauth.json", f["response"]["status"]))
 
     # 5. Error: 401 (no auth → chat)
@@ -194,7 +194,7 @@ def main():
         noauth,
         "error_format_401.json",
         "POST",
-        "/llm/ai-proxy/v1/chat/completions",
+        "/llm/openai/v1/chat/completions",
         json={
             "model": "gpt-4o-mini",
             "messages": [{"role": "user", "content": "hi"}],
@@ -208,7 +208,7 @@ def main():
         base,
         "error_format_400_no_model.json",
         "POST",
-        "/llm/ai-proxy/v1/chat/completions",
+        "/llm/openai/v1/chat/completions",
         json={"messages": [{"role": "user", "content": "hi"}]},
     )
     results.append(("error_format_400_no_model.json", f["response"]["status"]))
@@ -219,7 +219,7 @@ def main():
         base,
         "error_format_400_unknown.json",
         "POST",
-        "/llm/ai-proxy/v1/chat/completions",
+        "/llm/openai/v1/chat/completions",
         json={
             "model": "nonexistent-model-xyz",
             "messages": [{"role": "user", "content": "hi"}],
@@ -233,7 +233,7 @@ def main():
         base,
         "error_format_403.json",
         "POST",
-        "/llm/ai-proxy/v1/chat/completions",
+        "/llm/openai/v1/chat/completions",
         json={
             "model": "gpt-4o",
             "messages": [{"role": "user", "content": "hi"}],
@@ -253,7 +253,7 @@ def main():
         premium,
         "embeddings/nomic_single.json",
         "POST",
-        "/llm/ai-proxy/v1/embeddings",
+        "/llm/openai/v1/embeddings",
         json={"model": "nomic-embed-text-v1.5", "input": "hello world"},
     )
     results.append(("embeddings/nomic_single.json", f["response"]["status"]))

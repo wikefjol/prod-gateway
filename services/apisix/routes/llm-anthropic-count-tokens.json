@@ -1,7 +1,7 @@
 {
-  "id": "llm-claude-code-messages",
-  "name": "llm-claude-code-messages",
-  "uri": "/llm/claude-code/v1/messages",
+  "id": "llm-anthropic-count-tokens",
+  "name": "llm-anthropic-count-tokens",
+  "uri": "/llm/anthropic/v1/messages/count_tokens",
   "methods": ["POST"],
   "plugins": {
     "auth-transform": {
@@ -19,7 +19,7 @@
       "rejected_msg": "Claude Code sidecar requires claude_code_users membership"
     },
     "proxy-rewrite": {
-      "uri": "/v1/messages",
+      "uri": "/v1/messages/count_tokens",
       "headers": {
         "remove": ["Origin", "Referer", "Cookie", "Sec-Fetch-Site", "Sec-Fetch-Mode", "Sec-Fetch-Dest"],
         "set": {
@@ -31,17 +31,6 @@
     "request-id": {
       "header_name": "X-Request-Id",
       "include_in_response": true
-    },
-    "billing-extractor": {
-      "provider": "anthropic",
-      "endpoint": "messages"
-    },
-    "file-logger": {
-      "path": "/usr/local/apisix/logs/billing/llm-claude-code.log"
-    },
-    "response-wiretap": {
-      "enabled": true,
-      "log_path": "/usr/local/apisix/logs/wiretap/llm-claude-code.jsonl"
     }
   },
   "upstream": {

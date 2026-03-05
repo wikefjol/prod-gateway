@@ -24,8 +24,8 @@ flowchart LR
     subgraph Routes["Route Plugins"]
         direction TB
         MP["model-policy<br/>(ai-proxy only)"]
-        PR["proxy-rewrite<br/>(claude-code)"]
-        CR["consumer-restriction<br/>(claude-code only)"]
+        PR["proxy-rewrite<br/>(anthropic)"]
+        CR["consumer-restriction<br/>(anthropic only)"]
     end
 
     subgraph Upstreams[" "]

@@ -1,10 +1,10 @@
 {
-  "id": "llm-ai-proxy-chat-anthropic",
-  "name": "llm-ai-proxy-chat-anthropic",
-  "uri": "/llm/ai-proxy/v1/chat/completions",
+  "id": "llm-openai-chat-vllm-gemma",
+  "name": "llm-openai-chat-vllm-gemma",
+  "uri": "/llm/openai/v1/chat/completions",
   "methods": ["POST", "OPTIONS"],
-  "priority": 10,
-  "vars": [["post_arg.model", "~~", "^claude"]],
+  "priority": 11,
+  "vars": [["post_arg.model", "==", "gemma-3-12b-it"]],
   "plugins": {
     "cors": {
       "allow_origins": "*",
@@ -29,21 +29,24 @@
       "include_in_response": true
     },
     "ai-proxy": {
-      "provider": "anthropic",
+      "provider": "openai-compatible",
       "auth": {
-        "header": {
-          "x-api-key": "$ANTHROPIC_API_KEY",
-          "anthropic-version": "2023-06-01"
-        }
+        "header": {}
+      },
+      "override": {
+        "endpoint": "http://alvis-worker1.c3se.chalmers.se:43111/v1/chat/completions"
+      },
+      "options": {
+        "model": "google/gemma-3-12b-it"
       }
     },
     "provider-response-id": {},
     "file-logger": {
-      "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+      "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
     },
     "response-wiretap": {
       "enabled": true,
-      "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl"
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl"
     }
   }
 }

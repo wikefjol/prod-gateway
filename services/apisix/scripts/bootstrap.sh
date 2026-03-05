@@ -98,18 +98,18 @@ TEST_CONSUMERS=(
 
 # LLM Gateway routes (new /llm/* namespace)
 LLM_ROUTES=(
-  # ai-proxy (APISIX-native routing)
-  "llm-ai-proxy-chat-openai.json"
-  "llm-ai-proxy-chat-anthropic.json"
-  "llm-ai-proxy-models.json"
+  # OpenAI-protocol routes (APISIX ai-proxy plugin)
+  "llm-openai-chat-openai.json"
+  "llm-openai-chat-anthropic.json"
+  "llm-openai-models.json"
   # Alvis vLLM (C3SE HPC, no API key)
-  "llm-ai-proxy-chat-vllm-qwen3.json"
-  "llm-ai-proxy-chat-vllm-gemma.json"
-  "llm-ai-proxy-chat-vllm-gptoss.json"
-  "llm-ai-proxy-embed-vllm-nomic.json"
-  # Claude Code sidecar (native Anthropic, restricted to claude_code_users)
-  "llm-claude-code-messages.json"
-  "llm-claude-code-count-tokens.json"
+  "llm-openai-chat-vllm-qwen3.json"
+  "llm-openai-chat-vllm-gemma.json"
+  "llm-openai-chat-vllm-gptoss.json"
+  "llm-openai-embed-vllm-nomic.json"
+  # Anthropic-protocol routes (native Anthropic, restricted to claude_code_users)
+  "llm-anthropic-messages.json"
+  "llm-anthropic-count-tokens.json"
 )
 
 # -------------------------

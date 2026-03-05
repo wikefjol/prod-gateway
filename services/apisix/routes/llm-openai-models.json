@@ -1,7 +1,7 @@
 {
-  "id": "llm-ai-proxy-models",
-  "name": "llm-ai-proxy-models",
-  "uri": "/llm/ai-proxy/v1/models",
+  "id": "llm-openai-models",
+  "name": "llm-openai-models",
+  "uri": "/llm/openai/v1/models",
   "methods": ["GET", "OPTIONS"],
   "plugins": {
     "cors": {

@@ -16,13 +16,13 @@ The AI Gateway provides unified access to OpenAI, Anthropic, and Alvis vLLM mode
 All requests go through a single base URL:
 
 ```
-https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1
+https://ai-gateway.portal.chalmers.se/llm/openai/v1
 ```
 
 === "cURL"
 
     ```bash
-    curl https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1/chat/completions \
+    curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/chat/completions \
       -H "Authorization: Bearer YOUR_API_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -38,7 +38,7 @@ https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1
 
     client = OpenAI(
         api_key="YOUR_API_KEY",
-        base_url="https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1"
+        base_url="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
     )
 
     response = client.chat.completions.create(
@@ -50,24 +50,10 @@ https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1
 
 ## 3. Available models
 
-| Model | Provider | Tier |
-|-------|----------|------|
-| `gpt-4o` | OpenAI | Premium |
-| `gpt-4o-mini` | OpenAI | Base |
-| `gpt-3.5-turbo-0125` | OpenAI | Base |
-| `claude-sonnet-4-20250514` | Anthropic | Premium |
-| `claude-haiku-4-5` | Anthropic | Base |
-| `qwen3-coder-30b` | Alvis vLLM | Base |
-| `gemma-3-12b-it` | Alvis vLLM | Base |
-| `gpt-oss-20b` | Alvis vLLM | Base |
-| `nomic-embed-text-v1.5` | Alvis vLLM (embeddings) | Base |
-
-**Base** tier is available to all users. **Premium** models require premium access.
-
-To check available models programmatically:
+To see available models use:
 
 ```bash
-curl https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1/models \
+curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/models \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

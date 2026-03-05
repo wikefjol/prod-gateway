@@ -1,10 +1,10 @@
 {
-  "id": "llm-ai-proxy-chat-openai",
-  "name": "llm-ai-proxy-chat-openai",
-  "uri": "/llm/ai-proxy/v1/chat/completions",
+  "id": "llm-openai-chat-vllm-gptoss",
+  "name": "llm-openai-chat-vllm-gptoss",
+  "uri": "/llm/openai/v1/chat/completions",
   "methods": ["POST", "OPTIONS"],
-  "priority": 10,
-  "vars": [["post_arg.model", "~~", "^(gpt|o1|o3|davinci|text-embedding)"]],
+  "priority": 11,
+  "vars": [["post_arg.model", "==", "gpt-oss-20b"]],
   "plugins": {
     "cors": {
       "allow_origins": "*",
@@ -29,20 +29,24 @@
       "include_in_response": true
     },
     "ai-proxy": {
-      "provider": "openai",
+      "provider": "openai-compatible",
       "auth": {
-        "header": {
-          "Authorization": "Bearer $OPENAI_API_KEY"
-        }
+        "header": {}
+      },
+      "override": {
+        "endpoint": "http://alvis-worker1.c3se.chalmers.se:43121/v1/chat/completions"
+      },
+      "options": {
+        "model": "openai/gpt-oss-20b"
       }
     },
     "provider-response-id": {},
     "file-logger": {
-      "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+      "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
     },
     "response-wiretap": {
       "enabled": true,
-      "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl"
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl"
     }
   }
 }

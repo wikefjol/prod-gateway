@@ -49,7 +49,7 @@ Dev ports: 9080 gateway · 9180 admin · 3001 portal
 ## Testing
 - `tests/`: gateway test suite — see [tests/README.md](tests/README.md) for setup, markers, structure
 - `billing-tests/`: legacy pytest for billing/SSE parsing (separate venv, remote BASE_URL)
-- **IMPORTANT**: API routes are `/llm/ai-proxy/v1/...`, NOT `/v1/...`
+- **IMPORTANT**: API routes are `/llm/openai/v1/...`, NOT `/v1/...`
 
 ## Boundaries
 YOU MUST NOT restate facts already in Lua headers, JSON routes, or MODEL_REGISTRY

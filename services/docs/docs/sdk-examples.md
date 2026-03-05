@@ -3,7 +3,7 @@
 All examples use the base URL:
 
 ```
-https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1
+https://ai-gateway.portal.chalmers.se/llm/openai/v1
 ```
 
 ## Python — OpenAI SDK
@@ -15,7 +15,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1"
+    base_url="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
 )
 
 response = client.chat.completions.create(
@@ -33,7 +33,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1"
+    base_url="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
 )
 
 stream = client.chat.completions.create(
@@ -70,7 +70,7 @@ import anthropic
 
 client = anthropic.Anthropic(
     api_key="YOUR_API_KEY",
-    base_url="https://ai-gateway.portal.chalmers.se/llm/claude-code/v1"
+    base_url="https://ai-gateway.portal.chalmers.se/llm/anthropic/v1"
 )
 
 message = client.messages.create(
@@ -82,7 +82,7 @@ print(message.content[0].text)
 ```
 
 !!! note
-    The Claude Code sidecar endpoint (`/llm/claude-code/v1`) is restricted to the `claude_code_users` consumer group.
+    The Claude Code sidecar endpoint (`/llm/anthropic/v1`) is restricted to the `claude_code_users` consumer group.
 
 ## JavaScript / TypeScript
 
@@ -91,7 +91,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "YOUR_API_KEY",
-  baseURL: "https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1",
+  baseURL: "https://ai-gateway.portal.chalmers.se/llm/openai/v1",
 });
 
 const response = await client.chat.completions.create({
@@ -106,19 +106,19 @@ console.log(response.choices[0].message.content);
 
 ```bash
 # OpenAI model
-curl https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Anthropic model (same endpoint, OpenAI format)
-curl https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "claude-haiku-4-5", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Embeddings
-curl https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1/embeddings \
+curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/embeddings \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "nomic-embed-text-v1.5", "input": "Hello world"}'
@@ -130,7 +130,7 @@ Most SDKs and tools respect these environment variables:
 
 ```bash
 export OPENAI_API_KEY="YOUR_API_KEY"
-export OPENAI_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/ai-proxy/v1"
+export OPENAI_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
 ```
 
 Once set, the OpenAI SDK picks them up automatically — no need to pass `api_key` or `base_url` in code:

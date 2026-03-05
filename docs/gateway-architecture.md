@@ -24,9 +24,9 @@ Config: `services/swag/` — see [services/swag/README.md](../services/swag/READ
 
 | Path | Route | Key Plugins | Upstream |
 |------|-------|-------------|----------|
-| `/llm/ai-proxy/v1/*` | ai-proxy | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | OpenAI / Anthropic / Alvis vLLM (model-based) |
-| `/llm/ai-proxy/v1/embeddings` | ai-proxy-embed | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | Alvis vLLM (model-based) |
-| `/llm/claude-code/v1/*` | claude-code | auth-transform → key-auth → consumer-restriction → billing-extractor | Anthropic direct |
+| `/llm/openai/v1/*` | ai-proxy | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | OpenAI / Anthropic / Alvis vLLM (model-based) |
+| `/llm/openai/v1/embeddings` | ai-proxy-embed | auth-transform → openai-auth → model-policy → ai-proxy → provider-response-id | Alvis vLLM (model-based) |
+| `/llm/anthropic/v1/*` | anthropic | auth-transform → key-auth → consumer-restriction → billing-extractor | Anthropic direct |
 
 ## Auth Flow
 
@@ -44,7 +44,7 @@ Two groups with weekly rate limiting via `limit-count`:
 |----------|--------------|--------|
 | `base_user` | 1,000,000 | Mini models only |
 | `premium_user` | 1,000,000 | All models |
-| `claude_code_users` | 1,000,000 | All models + claude-code sidecar |
+| `claude_code_users` | 1,000,000 | All models + anthropic protocol |
 
 Consumers linked to group via `group_id` field at creation. Rate limit key: `consumer_name`.
 
@@ -55,16 +55,16 @@ Files: `services/apisix/consumer-groups/*.json`
 Routes share the same URI but use `vars` with `post_arg.model` regex to select provider:
 
 ```
-POST /llm/ai-proxy/v1/chat/completions {"model": "gpt-4o-mini"}
+POST /llm/openai/v1/chat/completions {"model": "gpt-4o-mini"}
   → vars: [["post_arg.model", "~~", "^(gpt|o1|o3|davinci|text-embedding)"]] → OpenAI
 
-POST /llm/ai-proxy/v1/chat/completions {"model": "claude-haiku-4-5"}
+POST /llm/openai/v1/chat/completions {"model": "claude-haiku-4-5"}
   → vars: [["post_arg.model", "~~", "^claude"]] → Anthropic
 
-POST /llm/ai-proxy/v1/chat/completions {"model": "qwen3-coder-30b"}
+POST /llm/openai/v1/chat/completions {"model": "qwen3-coder-30b"}
   → vars: [["post_arg.model", "==", "qwen3-coder-30b"]] → Alvis vLLM (openai-compatible)
 
-POST /llm/ai-proxy/v1/embeddings {"model": "nomic-embed-text-v1.5"}
+POST /llm/openai/v1/embeddings {"model": "nomic-embed-text-v1.5"}
   → vars: [["post_arg.model", "==", "nomic-embed-text-v1.5"]] → Alvis vLLM (openai-compatible)
 ```
 
@@ -116,13 +116,13 @@ All paths log to `logs/billing/*.log` via `file-logger`:
 
 ```bash
 # OpenAI streaming
-curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
+curl -N -X POST localhost:9080/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'
 
 # Anthropic streaming (returns OpenAI-format SSE)
-curl -N -X POST localhost:9080/llm/ai-proxy/v1/chat/completions \
+curl -N -X POST localhost:9080/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-haiku-4-5","messages":[{"role":"user","content":"count 1 to 5"}],"stream":true}'

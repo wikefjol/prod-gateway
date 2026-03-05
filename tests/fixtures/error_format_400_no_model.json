@@ -3,7 +3,7 @@
   "gateway_revision": "49088bb",
   "request": {
     "method": "POST",
-    "path": "/llm/ai-proxy/v1/chat/completions",
+    "path": "/llm/openai/v1/chat/completions",
     "body": {
       "messages": [
         {

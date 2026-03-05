@@ -134,7 +134,7 @@ function testApiKey() {
   if (testSpinner) testSpinner.style.display = 'inline-block';
 
   var body = { model: model, max_tokens: 150, messages: [{ role: 'user', content: message }] };
-  var endpoint = '/llm/ai-proxy/v1/chat/completions';
+  var endpoint = '/llm/openai/v1/chat/completions';
   var reqDetails = { url: endpoint, method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer [HIDDEN]' }, body: body };
 
   fetch(endpoint, {
