@@ -1,7 +1,7 @@
 {
-  "id": "llm-ai-proxy-embed-vllm-nomic",
-  "name": "llm-ai-proxy-embed-vllm-nomic",
-  "uri": "/llm/ai-proxy/v1/embeddings",
+  "id": "llm-openai-embed-vllm-nomic",
+  "name": "llm-openai-embed-vllm-nomic",
+  "uri": "/llm/openai/v1/embeddings",
   "methods": ["POST", "OPTIONS"],
   "priority": 11,
   "vars": [["post_arg.model", "==", "nomic-embed-text-v1.5"]],
@@ -42,11 +42,11 @@
     },
     "provider-response-id": {},
     "file-logger": {
-      "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-embed.log"
+      "path": "/usr/local/apisix/logs/billing/llm-openai-embed.log"
     },
     "response-wiretap": {
       "enabled": true,
-      "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-embed.jsonl"
+      "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-embed.jsonl"
     }
   }
 }

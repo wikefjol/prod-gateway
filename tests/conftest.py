@@ -9,7 +9,7 @@ import pytest
 
 GATEWAY_URL = "http://localhost:9080"
 ADMIN_URL = "http://localhost:9180"
-API_PREFIX = "/llm/ai-proxy"
+API_PREFIX = "/llm/openai"
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

@@ -13,7 +13,7 @@ Sign in with your Chalmers credentials to get your API key. You can recycle (reg
 ### 2. First Request
 
 ```bash
-curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://lamassu.ita.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -34,13 +34,13 @@ Authorization: Bearer <your-key>
 
 | Use Case | Base URL | Protocol |
 |----------|----------|----------|
-| ai-proxy (all models) | `/llm/ai-proxy/v1` | OpenAI-compatible |
-| Embeddings | `/llm/ai-proxy/v1` | OpenAI-compatible |
-| Claude Code sidecar | `/llm/claude-code/v1` | Anthropic native |
+| Chat completions (all models) | `/llm/openai/v1` | OpenAI-compatible |
+| Embeddings | `/llm/openai/v1` | OpenAI-compatible |
+| Anthropic native (Claude Code) | `/llm/anthropic/v1` | Anthropic native |
 
 Full URLs use base `https://lamassu.ita.chalmers.se`.
 
-**Claude Code sidecar** is restricted to the `claude_code_users` consumer group.
+**Anthropic native endpoint** is restricted to the `claude_code_users` consumer group.
 
 ## Consumer Groups & Model Access
 
@@ -50,7 +50,7 @@ Full URLs use base `https://lamassu.ita.chalmers.se`.
 | `premium_user` | All models | 1M req/week |
 | `claude_code_users` | All models + Claude Code sidecar | 1M req/week |
 
-For the current model list, query the API: `GET /llm/ai-proxy/v1/models`
+For the current model list, query the API: `GET /llm/openai/v1/models`
 
 ## Usage Examples
 
@@ -61,7 +61,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="<your-key>",
-    base_url="https://lamassu.ita.chalmers.se/llm/ai-proxy/v1"
+    base_url="https://lamassu.ita.chalmers.se/llm/openai/v1"
 )
 
 # Works with both OpenAI and Anthropic models
@@ -76,13 +76,13 @@ response = client.chat.completions.create(
 **Claude Code:**
 ```bash
 export ANTHROPIC_API_KEY="<your-key>"
-export ANTHROPIC_BASE_URL="https://lamassu.ita.chalmers.se/llm/claude-code/v1"
+export ANTHROPIC_BASE_URL="https://lamassu.ita.chalmers.se/llm/anthropic/v1"
 ```
 
 **OpenCode / Cursor / Other OpenAI-compatible agents:**
 ```bash
 export OPENAI_API_KEY="<your-key>"
-export OPENAI_BASE_URL="https://lamassu.ita.chalmers.se/llm/ai-proxy/v1"
+export OPENAI_BASE_URL="https://lamassu.ita.chalmers.se/llm/openai/v1"
 ```
 
 ### OpenWebUI
@@ -91,14 +91,14 @@ Browser-based clients (CORS enabled on chat/models routes):
 
 | Setup | Base URL |
 |-------|----------|
-| ai-proxy | `https://lamassu.ita.chalmers.se/llm/ai-proxy/v1` |
+| OpenAI protocol | `https://lamassu.ita.chalmers.se/llm/openai/v1` |
 
 ### Mathematica
 
 ```mathematica
 ServiceConnect["OpenAI",
   "APIKey" -> "<your-key>",
-  "Endpoint" -> "https://lamassu.ita.chalmers.se/llm/ai-proxy/v1"
+  "Endpoint" -> "https://lamassu.ita.chalmers.se/llm/openai/v1"
 ]
 ```
 
@@ -106,25 +106,25 @@ ServiceConnect["OpenAI",
 
 ```bash
 # OpenAI model
-curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://lamassu.ita.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Anthropic model (same endpoint, OpenAI format)
-curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://lamassu.ita.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{"model": "claude-haiku-4-5", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Alvis vLLM model (same endpoint)
-curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/chat/completions \
+curl https://lamassu.ita.chalmers.se/llm/openai/v1/chat/completions \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{"model": "qwen3-coder-30b", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Embeddings
-curl https://lamassu.ita.chalmers.se/llm/ai-proxy/v1/embeddings \
+curl https://lamassu.ita.chalmers.se/llm/openai/v1/embeddings \
   -H "Authorization: Bearer <your-key>" \
   -H "Content-Type: application/json" \
   -d '{"model": "nomic-embed-text-v1.5", "input": "Hello world"}'
@@ -188,4 +188,4 @@ A: Check `X-RateLimit-Remaining` header in any response.
 A: You may have recycled it in the portal. Get your new key from the portal.
 
 **Q: Which models are available?**
-A: Use the `/llm/ai-proxy/v1/models` endpoint to list available models for your tier.
+A: Use the `/llm/openai/v1/models` endpoint to list available models for your tier.

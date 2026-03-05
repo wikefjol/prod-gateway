@@ -17,7 +17,7 @@ flowchart RL
     subgraph Resp["Response Plugins"]
         direction TB
         PRID["provider-response-id<br/>(ai-proxy)"]
-        BE["billing-extractor<br/>(claude-code)"]
+        BE["billing-extractor<br/>(anthropic)"]
     end
 
     FL[file-logger]

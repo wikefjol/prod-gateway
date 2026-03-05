@@ -44,6 +44,6 @@ Deterministic dev-only keys from `services/apisix/test-consumers/`:
 - `test-key-premium-1` (premium tier)
 
 ## Important
-- API routes are `/llm/ai-proxy/v1/...`, NOT `/v1/...`
+- API routes are `/llm/openai/v1/...`, NOT `/v1/...`
 - Capture fixtures: `tests/.venv/bin/python tests/capture/record.py`
 - Revision check: `curl -sI http://localhost:9080/health | grep X-Gateway-Revision` should match `git rev-parse --short HEAD`
