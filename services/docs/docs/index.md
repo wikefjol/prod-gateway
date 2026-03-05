@@ -70,6 +70,5 @@ One key works for all models and endpoints. Routing is automatic based on the `m
 ## Next steps
 
 - [SDK Examples](sdk-examples.md) — Python, JavaScript, cURL code snippets
-- [Coding Agents](coding-agents.md) — Claude Code, Cursor, Continue.dev, Aider setup
+- [Coding Agents](coding-agents.md) — configure AI coding tools to use the gateway
 - [OpenWebUI](openwebui.md) — Browser-based chat interface
-- [Error Reference](error-reference.md) — Troubleshoot common errors

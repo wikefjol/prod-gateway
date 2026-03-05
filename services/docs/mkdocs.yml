@@ -20,8 +20,6 @@ nav:
   - OpenWebUI: openwebui.md
   - SDK Examples: sdk-examples.md
   - Coding Agents: coding-agents.md
-  - Error Reference: error-reference.md
-  - FAQ: faq.md
 
 markdown_extensions:
   - admonition
