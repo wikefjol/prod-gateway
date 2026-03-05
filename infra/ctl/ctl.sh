@@ -36,6 +36,9 @@ set -- "${ARGS[@]:-}"
 CMD="${1:-help}"
 shift || true
 
+# Command-level env override (test command implies test env)
+[[ "$CMD" == "test" ]] && ENV_NAME="test"
+
 # Service argument (optional - defaults to all for up/down, required for some commands)
 SVC="${1:-}"
 [[ "$SVC" =~ ^(apisix|portal|swag|docs)$ ]] && shift || SVC=""
@@ -219,8 +222,8 @@ cmd_rebuild() {
   echo "✅ Rebuild complete."
 }
 
-# Dev command - canonical way to get to known-good state
-cmd_dev() {
+# Full-cycle command - build + start + bootstrap + verify
+cmd_full_cycle() {
   local no_cache="" nuke="" with_portal="" with_swag=""
   for arg in "$@"; do
     case "$arg" in
@@ -271,7 +274,7 @@ cmd_dev() {
 
   # Bootstrap (includes version header)
   echo "Bootstrapping..."
-  "$ROOT/services/apisix/scripts/bootstrap.sh" || { echo "Bootstrap failed" >&2; exit 1; }
+  "$ROOT/services/apisix/scripts/bootstrap.sh" "$ENV_NAME" || { echo "Bootstrap failed" >&2; exit 1; }
 
   # Assert revision matches (ghost killer)
   if ! assert_revision "$git_sha"; then
@@ -331,7 +334,11 @@ case "$CMD" in
     ;;
 
   dev)
-    cmd_dev "$@"
+    cmd_full_cycle "$@"
+    ;;
+
+  test)
+    cmd_full_cycle "$@"
     ;;
 
   restart)
@@ -345,8 +352,8 @@ case "$CMD" in
     ;;
 
   reset)
-    echo "DEPRECATED: 'reset' is now an alias for 'dev'. Use 'dev' directly." >&2
-    cmd_dev "$@"
+    echo "DEPRECATED: use 'dev' or 'test'" >&2
+    cmd_full_cycle "$@"
     ;;
 
   logs)
@@ -407,7 +414,8 @@ Gateway Control Script
 Usage: ./infra/ctl/ctl.sh [command] [service] [options]
 
 === RECOMMENDED ===
-  dev                 Build + start + bootstrap + verify revision
+  dev                 Build + start + bootstrap + verify (dev env)
+  test                Build + start + bootstrap + verify (test env)
                       --no-cache     Force fresh build (cache-bust)
                       --with-portal  Also manage portal service
                       --with-swag    Also manage SWAG reverse proxy
@@ -419,7 +427,7 @@ Usage: ./infra/ctl/ctl.sh [command] [service] [options]
   build [service]     Build (may use cache)
   rebuild [service]   Build --no-cache + restart (single svc)
   restart [service]   [WARN: reuses old container]
-  reset               DEPRECATED - use 'dev'
+  reset               DEPRECATED - use 'dev' or 'test'
   logs [service] [-f] View logs (default: apisix)
   ps/status           Show status of all services
   exec [service] cmd  Run command in container (default: apisix)
@@ -440,11 +448,14 @@ Environment:
   GATEWAY_ENV         Set environment (dev|test), default: dev
 
 Examples:
-  ./infra/ctl/ctl.sh dev                   # Build + start + bootstrap + verify
+  ./infra/ctl/ctl.sh dev                   # Build + start + bootstrap + verify (dev)
   ./infra/ctl/ctl.sh dev --no-cache        # Cache-bust build
   ./infra/ctl/ctl.sh dev --with-portal     # Full stack
   ./infra/ctl/ctl.sh dev --with-swag       # Include SWAG reverse proxy
   ./infra/ctl/ctl.sh dev --nuke            # Fresh etcd state
+  ./infra/ctl/ctl.sh test                  # Full cycle targeting test env
+  ./infra/ctl/ctl.sh test --with-portal    # Test env with portal
+  ./infra/ctl/ctl.sh test --no-cache       # Test env, cache-bust build
   ./infra/ctl/ctl.sh up swag               # Start SWAG only
   ./infra/ctl/ctl.sh logs apisix -f        # Follow apisix logs
 EOF
