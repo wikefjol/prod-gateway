@@ -212,14 +212,4 @@ document.addEventListener('DOMContentLoaded', function() {
       this.style.height = Math.min(this.scrollHeight, 200) + 'px';
     });
   }
-  // Active nav link
-  var path = window.location.pathname;
-  document.querySelectorAll('.nav-link').forEach(function(link) {
-    var href = link.getAttribute('href');
-    if (href === '/portal/' && (path === '/portal/' || path === '/portal')) {
-      link.classList.add('active');
-    } else if (href !== '/portal/' && path.startsWith(href)) {
-      link.classList.add('active');
-    }
-  });
 });
