@@ -32,7 +32,7 @@ services/
 
 infra/
 ├── env/              # Environment files
-└── ctl/ctl.sh        # Control script
+└── ctl/              # ctl.sh (lifecycle), consumers.sh (admin)
 ```
 
 ## Commands
@@ -45,6 +45,11 @@ infra/
 ./infra/ctl/ctl.sh down             # Stop
 ./infra/ctl/ctl.sh logs -f          # Follow logs
 ./infra/ctl/ctl.sh routes           # List routes
+
+# Consumer management (standalone)
+./infra/ctl/consumers.sh list                        # List all consumers
+./infra/ctl/consumers.sh move <ids...> --to <group>  # Move by OID, email, or handle
+                          [--file path] [--dry-run]  # Bulk from file, preview mode
 ```
 
 ## Setup
