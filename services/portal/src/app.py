@@ -197,23 +197,25 @@ class APISIXClient:
 
         return None
 
-    def create_consumer(self, user_oid: str, user_name: str = None, user_email: str = None) -> Dict[str, Any]:
+    def create_consumer(self, user_oid: str, user_email: str = None, preferred_username: str = None) -> Dict[str, Any]:
         """Create a new Consumer for the user
 
         Args:
             user_oid: OIDC user OID
-            user_name: Display name for description
-            user_email: Email for description
+            user_email: Email from Entra claims
+            preferred_username: UPN from Entra claims
 
         Returns:
             Created Consumer data
         """
         consumer_data = {
             "username": user_oid,
-            "desc": f"Created by SSO portal for {user_name or 'user'} ({user_email or 'no-email'})",
+            "desc": "Portal consumer",
             "labels": {
                 "source": "oidc-portal-v0",
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
+                "email": user_email or "",
+                "preferred_username": preferred_username or ""
             },
             "group_id": "base_user"
         }
@@ -221,7 +223,7 @@ class APISIXClient:
         response = self._make_request('PUT', f'consumers/{user_oid}', consumer_data)
         created_consumer = response.json()
 
-        logger.info(f"Created consumer for user_oid: {user_oid}, name: {user_name}, assigned to base_user group")
+        logger.info(f"Created consumer for user_oid: {user_oid}, assigned to base_user group")
         return created_consumer['value'] if 'value' in created_consumer else created_consumer
 
     def get_consumer_credentials(self, user_oid: str) -> List[Dict[str, Any]]:
@@ -419,7 +421,8 @@ class PortalService:
                 user_identity = {
                     'user_oid': user_oid,
                     'user_name': userinfo.get('name', 'Unknown User'),
-                    'user_email': userinfo.get('email') or userinfo.get('preferred_username', 'unknown@example.com')
+                    'user_email': userinfo.get('email') or userinfo.get('preferred_username', 'unknown@example.com'),
+                    'preferred_username': userinfo.get('preferred_username', '')
                 }
 
                 logger.info(f"Resolved user identity from X-Userinfo: {user_identity['user_oid']} ({user_identity['user_name']})")
@@ -448,7 +451,8 @@ class PortalService:
                 user_identity = {
                     'user_oid': user_oid,
                     'user_name': jwt_claims.get('name', 'Unknown User'),
-                    'user_email': jwt_claims.get('email') or jwt_claims.get('preferred_username', 'unknown@example.com')
+                    'user_email': jwt_claims.get('email') or jwt_claims.get('preferred_username', 'unknown@example.com'),
+                    'preferred_username': jwt_claims.get('preferred_username', '')
                 }
 
                 logger.info(f"Resolved user identity from X-Id-Token: {user_identity['user_oid']} ({user_identity['user_name']})")
@@ -478,8 +482,8 @@ class PortalService:
             # Create new consumer
             consumer = self.apisix.create_consumer(
                 user_oid=user_oid,
-                user_name=user_identity['user_name'],
-                user_email=user_identity['user_email']
+                user_email=user_identity['user_email'],
+                preferred_username=user_identity.get('preferred_username', '')
             )
 
         return consumer

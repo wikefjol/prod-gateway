@@ -1,6 +1,10 @@
 {
   "username": "test-premium-1",
   "desc": "Deterministic test user — dev/test only",
+  "labels": {
+    "source": "bootstrap-test",
+    "email": "testpremium1@chalmers.se"
+  },
   "group_id": "premium_user",
   "plugins": {
     "key-auth": {

@@ -1,6 +1,10 @@
 {
   "username": "test-base-1",
   "desc": "Deterministic test user — dev/test only",
+  "labels": {
+    "source": "bootstrap-test",
+    "email": "testbase1@student.chalmers.se"
+  },
   "group_id": "base_user",
   "plugins": {
     "key-auth": {
