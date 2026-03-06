@@ -70,7 +70,7 @@ import anthropic
 
 client = anthropic.Anthropic(
     api_key="YOUR_API_KEY",
-    base_url="https://ai-gateway.portal.chalmers.se/llm/anthropic/v1"
+    base_url="https://ai-gateway.portal.chalmers.se/llm/anthropic"
 )
 
 message = client.messages.create(
@@ -133,7 +133,9 @@ export OPENAI_API_KEY="YOUR_API_KEY"
 export OPENAI_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
 ```
 
-Once set, the OpenAI SDK picks them up automatically — no need to pass `api_key` or `base_url` in code:
+Once set, the OpenAI SDK picks them up automatically — no need to pass `api_key` or `base_url` in code.
+
+Get your key from the [Portal](/portal/){:target="_blank"} if you haven't already.
 
 ```python
 from openai import OpenAI

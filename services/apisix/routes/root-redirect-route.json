@@ -4,7 +4,7 @@
   "methods": ["GET", "HEAD"],
   "plugins": {
     "redirect": {
-      "uri": "/portal/",
+      "uri": "/docs/",
       "ret_code": 302
     }
   }

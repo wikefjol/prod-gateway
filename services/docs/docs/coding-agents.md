@@ -9,7 +9,7 @@ The gateway exposes an OpenAI-compatible API. Most coding agents and AI tools th
 
 Most OpenAI-compatible tools need two things:
 
-1. **API key** — your gateway key from the [Portal](/portal/)
+1. **API key** — your gateway key from the [Portal](/portal/){:target="_blank"}
 2. **Base URL** — `https://ai-gateway.portal.chalmers.se/llm/openai/v1`
 
 Look for settings like `OPENAI_API_KEY` / `OPENAI_BASE_URL`, or equivalent config options in the tool's documentation.
@@ -42,7 +42,7 @@ Tools that use the Anthropic API directly (not OpenAI-compatible) need the `/llm
 
 ```bash
 export ANTHROPIC_API_KEY="YOUR_API_KEY"
-export ANTHROPIC_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/anthropic/v1"
+export ANTHROPIC_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/anthropic"
 ```
 
 !!! note

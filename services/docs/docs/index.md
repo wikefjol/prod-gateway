@@ -1,74 +1,34 @@
 # Getting Started
 
-The AI Gateway provides unified access to OpenAI, Anthropic, and Alvis vLLM models through a single API endpoint with Chalmers SSO authentication.
+The AI Gateway gives you access to OpenAI, Anthropic, and vLLM models with your Chalmers account.
 
 ## 1. Sign in & get your API key
 
-1. Go to the [Portal](/portal/)
-2. Sign in with your **Chalmers credentials** (Microsoft SSO)
-3. Click **Get Key** — your key is displayed once and stored securely
+Go to the [Portal](/portal/){:target="_blank"} and sign in with your **Chalmers credentials** (Microsoft SSO). Click **Get Key** — your key is shown once.
 
 !!! warning
-    Store your key somewhere safe. If you lose it, you can regenerate it in the portal — but the old key is immediately invalidated.
+    Store your key somewhere safe. If you lose it, regenerate it in the portal — the old key is immediately invalidated.
 
-## 2. Make your first API call
+## 2. Start chatting in Open WebUI
 
-All requests go through a single base URL:
+The easiest way to use the gateway is through [Open WebUI](https://openwebui.portal.chalmers.se){:target="_blank"} — a browser-based chat interface.
 
-```
-https://ai-gateway.portal.chalmers.se/llm/openai/v1
-```
+1. Open [Open WebUI](https://openwebui.portal.chalmers.se){:target="_blank"}
+2. Add a **Direct Connection** ([guide](https://docs.openwebui.com/features/chat-conversations/direct-connections/#user-configuration){:target="_blank"}):
+    - **Base URL**: `https://ai-gateway.portal.chalmers.se/llm/openai/v1`
+    - **Key**: your API key
+3. Pick a model and chat
 
-=== "cURL"
+One key works for all models — routing is automatic based on the model you select.
 
-    ```bash
-    curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/chat/completions \
-      -H "Authorization: Bearer YOUR_API_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": "Hello!"}]
-      }'
-    ```
+## 3. Want API access?
 
-=== "Python"
-
-    ```python
-    from openai import OpenAI
-
-    client = OpenAI(
-        api_key="YOUR_API_KEY",
-        base_url="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
-    )
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": "Hello!"}]
-    )
-    print(response.choices[0].message.content)
-    ```
-
-## 3. Available models
-
-To see available models use:
+Use the same key and base URL with any OpenAI-compatible SDK or tool:
 
 ```bash
-curl https://ai-gateway.portal.chalmers.se/llm/openai/v1/models \
-  -H "Authorization: Bearer YOUR_API_KEY"
+export OPENAI_API_KEY="YOUR_API_KEY"
+export OPENAI_BASE_URL="https://ai-gateway.portal.chalmers.se/llm/openai/v1"
 ```
 
-## 4. Authentication
-
-Every request requires a Bearer token:
-
-```
-Authorization: Bearer YOUR_API_KEY
-```
-
-One key works for all models and endpoints. Routing is automatic based on the `model` field.
-
-## Next steps
-
-- [SDK Examples](sdk-examples.md) — Python, JavaScript, cURL code snippets
+- [SDK Examples](sdk-examples.md) — Python, JavaScript, cURL
 - [Coding Agents](coding-agents.md) — configure AI coding tools to use the gateway
-- [OpenWebUI](openwebui.md) — Browser-based chat interface
