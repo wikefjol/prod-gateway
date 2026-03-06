@@ -98,6 +98,9 @@ TEST_CONSUMERS=(
 
 # LLM Gateway routes (new /llm/* namespace)
 LLM_ROUTES=(
+  # CORS preflight (OPTIONS has no body, so vars-based routes can't match)
+  "llm-openai-chat-preflight.json"
+  "llm-openai-embed-preflight.json"
   # OpenAI-protocol routes (APISIX ai-proxy plugin)
   "llm-openai-chat-openai.json"
   "llm-openai-chat-anthropic.json"

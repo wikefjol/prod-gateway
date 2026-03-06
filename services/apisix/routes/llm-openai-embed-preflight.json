@@ -1,0 +1,16 @@
+{
+  "id": "llm-openai-embed-preflight",
+  "name": "llm-openai-embed-preflight",
+  "uri": "/llm/openai/v1/embeddings",
+  "methods": ["OPTIONS"],
+  "priority": 100,
+  "plugins": {
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": "POST,OPTIONS",
+      "allow_headers": "Authorization,Content-Type,X-Request-Id",
+      "expose_headers": "X-Request-Id",
+      "max_age": 3600
+    }
+  }
+}
