@@ -3,7 +3,7 @@
   "gateway_revision": "49088bb",
   "request": {
     "method": "POST",
-    "path": "/llm/ai-proxy/v1/embeddings",
+    "path": "/llm/openai/v1/embeddings",
     "body": {
       "model": "nomic-embed-text-v1.5",
       "input": "hello world"

@@ -46,8 +46,8 @@
         },
         {
           "value": {
-            "id": "llm-ai-proxy-chat-anthropic",
-            "name": "llm-ai-proxy-chat-anthropic",
+            "id": "llm-openai-chat-anthropic",
+            "name": "llm-openai-chat-anthropic",
             "update_time": 1772524908,
             "create_time": 1770967776,
             "vars": [
@@ -75,14 +75,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -99,7 +99,7 @@
               }
             },
             "priority": 10,
-            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "uri": "/llm/openai/v1/chat/completions",
             "methods": [
               "POST",
               "OPTIONS"
@@ -107,12 +107,12 @@
           },
           "createdIndex": 25,
           "modifiedIndex": 878,
-          "key": "/apisix/routes/llm-ai-proxy-chat-anthropic"
+          "key": "/apisix/routes/llm-openai-chat-anthropic"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-chat-openai",
-            "name": "llm-ai-proxy-chat-openai",
+            "id": "llm-openai-chat-openai",
+            "name": "llm-openai-chat-openai",
             "update_time": 1772524908,
             "create_time": 1770967776,
             "vars": [
@@ -139,14 +139,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -163,7 +163,7 @@
               }
             },
             "priority": 10,
-            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "uri": "/llm/openai/v1/chat/completions",
             "methods": [
               "POST",
               "OPTIONS"
@@ -171,12 +171,12 @@
           },
           "createdIndex": 24,
           "modifiedIndex": 877,
-          "key": "/apisix/routes/llm-ai-proxy-chat-openai"
+          "key": "/apisix/routes/llm-openai-chat-openai"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-chat-vllm-gemma",
-            "name": "llm-ai-proxy-chat-vllm-gemma",
+            "id": "llm-openai-chat-vllm-gemma",
+            "name": "llm-openai-chat-vllm-gemma",
             "update_time": 1772524909,
             "create_time": 1772524737,
             "vars": [
@@ -207,14 +207,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -231,7 +231,7 @@
               }
             },
             "priority": 11,
-            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "uri": "/llm/openai/v1/chat/completions",
             "methods": [
               "POST",
               "OPTIONS"
@@ -239,12 +239,12 @@
           },
           "createdIndex": 860,
           "modifiedIndex": 881,
-          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-gemma"
+          "key": "/apisix/routes/llm-openai-chat-vllm-gemma"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-chat-vllm-gptoss",
-            "name": "llm-ai-proxy-chat-vllm-gptoss",
+            "id": "llm-openai-chat-vllm-gptoss",
+            "name": "llm-openai-chat-vllm-gptoss",
             "update_time": 1772524909,
             "create_time": 1772524737,
             "vars": [
@@ -275,14 +275,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -299,7 +299,7 @@
               }
             },
             "priority": 11,
-            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "uri": "/llm/openai/v1/chat/completions",
             "methods": [
               "POST",
               "OPTIONS"
@@ -307,12 +307,12 @@
           },
           "createdIndex": 861,
           "modifiedIndex": 882,
-          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-gptoss"
+          "key": "/apisix/routes/llm-openai-chat-vllm-gptoss"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-chat-vllm-qwen3",
-            "name": "llm-ai-proxy-chat-vllm-qwen3",
+            "id": "llm-openai-chat-vllm-qwen3",
+            "name": "llm-openai-chat-vllm-qwen3",
             "update_time": 1772524908,
             "create_time": 1772524737,
             "vars": [
@@ -343,14 +343,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-chat.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-chat.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-chat.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-chat.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -367,7 +367,7 @@
               }
             },
             "priority": 11,
-            "uri": "/llm/ai-proxy/v1/chat/completions",
+            "uri": "/llm/openai/v1/chat/completions",
             "methods": [
               "POST",
               "OPTIONS"
@@ -375,12 +375,12 @@
           },
           "createdIndex": 859,
           "modifiedIndex": 880,
-          "key": "/apisix/routes/llm-ai-proxy-chat-vllm-qwen3"
+          "key": "/apisix/routes/llm-openai-chat-vllm-qwen3"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-embed-vllm-nomic",
-            "name": "llm-ai-proxy-embed-vllm-nomic",
+            "id": "llm-openai-embed-vllm-nomic",
+            "name": "llm-openai-embed-vllm-nomic",
             "update_time": 1772524909,
             "create_time": 1772524737,
             "vars": [
@@ -411,14 +411,14 @@
                 "allow_headers": "Authorization,Content-Type,X-Request-Id"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-ai-proxy-embed.log"
+                "path": "/usr/local/apisix/logs/billing/llm-openai-embed.log"
               },
               "openai-auth": {
                 "header": "x-api-key",
                 "hide_credentials": true
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-ai-proxy-embed.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-openai-embed.jsonl",
                 "enabled": true
               },
               "provider-response-id": {},
@@ -435,7 +435,7 @@
               }
             },
             "priority": 11,
-            "uri": "/llm/ai-proxy/v1/embeddings",
+            "uri": "/llm/openai/v1/embeddings",
             "methods": [
               "POST",
               "OPTIONS"
@@ -443,16 +443,16 @@
           },
           "createdIndex": 862,
           "modifiedIndex": 883,
-          "key": "/apisix/routes/llm-ai-proxy-embed-vllm-nomic"
+          "key": "/apisix/routes/llm-openai-embed-vllm-nomic"
         },
         {
           "value": {
-            "id": "llm-ai-proxy-models",
+            "id": "llm-openai-models",
             "methods": [
               "GET",
               "OPTIONS"
             ],
-            "name": "llm-ai-proxy-models",
+            "name": "llm-openai-models",
             "plugins": {
               "auth-transform": {
                 "sanitize_request_ids": true,
@@ -478,16 +478,16 @@
               }
             },
             "update_time": 1772524908,
-            "uri": "/llm/ai-proxy/v1/models",
+            "uri": "/llm/openai/v1/models",
             "create_time": 1770967776
           },
           "createdIndex": 26,
           "modifiedIndex": 879,
-          "key": "/apisix/routes/llm-ai-proxy-models"
+          "key": "/apisix/routes/llm-openai-models"
         },
         {
           "value": {
-            "id": "llm-claude-code-count-tokens",
+            "id": "llm-anthropic-count-tokens",
             "methods": [
               "POST"
             ],
@@ -499,7 +499,7 @@
               "scheme": "https",
               "pass_host": "node"
             },
-            "name": "llm-claude-code-count-tokens",
+            "name": "llm-anthropic-count-tokens",
             "plugins": {
               "auth-transform": {
                 "sanitize_request_ids": true,
@@ -540,16 +540,16 @@
               }
             },
             "update_time": 1772524909,
-            "uri": "/llm/claude-code/v1/messages/count_tokens",
+            "uri": "/llm/anthropic/v1/messages/count_tokens",
             "create_time": 1770967776
           },
           "createdIndex": 28,
           "modifiedIndex": 885,
-          "key": "/apisix/routes/llm-claude-code-count-tokens"
+          "key": "/apisix/routes/llm-anthropic-count-tokens"
         },
         {
           "value": {
-            "id": "llm-claude-code-messages",
+            "id": "llm-anthropic-messages",
             "methods": [
               "POST"
             ],
@@ -561,14 +561,14 @@
               "scheme": "https",
               "pass_host": "node"
             },
-            "name": "llm-claude-code-messages",
+            "name": "llm-anthropic-messages",
             "plugins": {
               "billing-extractor": {
                 "provider": "anthropic",
                 "endpoint": "messages"
               },
               "response-wiretap": {
-                "log_path": "/usr/local/apisix/logs/wiretap/llm-claude-code.jsonl",
+                "log_path": "/usr/local/apisix/logs/wiretap/llm-anthropic.jsonl",
                 "enabled": true
               },
               "key-auth": {
@@ -580,7 +580,7 @@
                 "mode": "bearer_to_api_key"
               },
               "file-logger": {
-                "path": "/usr/local/apisix/logs/billing/llm-claude-code.log"
+                "path": "/usr/local/apisix/logs/billing/llm-anthropic.log"
               },
               "proxy-rewrite": {
                 "uri": "/v1/messages",
@@ -613,12 +613,12 @@
               }
             },
             "update_time": 1772524909,
-            "uri": "/llm/claude-code/v1/messages",
+            "uri": "/llm/anthropic/v1/messages",
             "create_time": 1770967776
           },
           "createdIndex": 27,
           "modifiedIndex": 884,
-          "key": "/apisix/routes/llm-claude-code-messages"
+          "key": "/apisix/routes/llm-anthropic-messages"
         },
         {
           "value": {

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Keys — AI Gateway Portal{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>API Key Management</h1>
+        <p>Manage your API access key for the LLM Gateway</p>
+    </div>
+
+    <div class="user-info">
+        <h3>Signed in as</h3>
+        <p><strong>{{ user_identity.user_name }}</strong> ({{ user_identity.user_email }})</p>
+        <small>User ID: {{ user_identity.user_oid }}</small>
+    </div>
+
+    <div class="api-key-section">
+        <h3>Your API Key</h3>
+
+        {% if has_key %}
+            <div class="key-display" id="keyDisplay">
+                <div class="key-text">
+                    <span id="keyHidden" class="key-hidden">&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;</span>
+                    <span id="keyVisible" style="display: none;">{{ current_key }}</span>
+                </div>
+                <div class="key-actions">
+                    <button class="btn btn-icon" onclick="toggleKeyVisibility()" id="toggleBtn" title="Show/hide key">
+                        <span id="eyeIcon">&#x1f441;&#xfe0f;</span>
+                    </button>
+                    <button class="btn btn-success btn-icon" onclick="copyToClipboard()" id="copyBtn" title="Copy key">
+                        &#x1f4cb;
+                    </button>
+                </div>
+            </div>
+
+            <div class="key-warning">
+                <strong>Important:</strong> This key grants access to the LLM API.
+                Store it securely and never share it. If compromised, recycle it immediately.
+            </div>
+
+            <div style="margin-top: 1.25rem;">
+                <button class="btn btn-warning" onclick="recycleKey()" id="recycleBtn">
+                    Recycle Key
+                </button>
+                <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
+                    Recycling invalidates the current key and generates a new one.
+                </small>
+            </div>
+        {% else %}
+            <div class="no-key-message">
+                You don't have an API key yet.
+            </div>
+
+            <div style="text-align: center; margin-top: 1.25rem;">
+                <button class="btn" onclick="getKey()" id="getKeyBtn">
+                    Get Key
+                </button>
+                <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
+                    Generate your first API key to start using the gateway.
+                </small>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if has_key %}
+    <div class="test-section">
+        <h3>Test Your API Key</h3>
+
+        <div class="test-input">
+            <label for="testModel">Model</label>
+            <select id="testModel" class="test-select">
+                <option value="claude-haiku-4-5">claude-haiku-4-5 (Anthropic)</option>
+                <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                <option value="qwen3-coder-30b">qwen3-coder-30b (Alvis vLLM)</option>
+                <option value="gemma-3-12b-it">gemma-3-12b-it (Alvis vLLM)</option>
+            </select>
+        </div>
+
+        <div class="test-input">
+            <label for="testMessage">Prompt</label>
+            <textarea
+                id="testMessage"
+                class="test-textarea"
+                placeholder="Enter your test message... (Ctrl+Enter to send)"
+                rows="3"
+            ></textarea>
+        </div>
+
+        <div class="test-actions">
+            <button class="btn" onclick="testApiKey()" id="testBtn">
+                <span id="testBtnText">Send Test</span>
+                <span id="testSpinner" class="spinner" style="display: none;"></span>
+            </button>
+            <button class="btn btn-secondary" onclick="clearTest()">Clear</button>
+        </div>
+
+        <div class="test-response" id="testResponse" style="display: none;">
+            <h4>Response</h4>
+            <div class="response-content" id="responseContent"></div>
+        </div>
+
+        <div class="test-details" id="testDetails" style="display: none;">
+            <details>
+                <summary>Request Details</summary>
+                <pre id="requestDetails"></pre>
+            </details>
+            <details>
+                <summary>Response Details</summary>
+                <pre id="responseDetails"></pre>
+            </details>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="help-section">
+        <h4>Quick start</h4>
+        <ul>
+            <li>Each user gets exactly one API key</li>
+            <li>Include your key via the <code>Authorization: Bearer &lt;key&gt;</code> header</li>
+            <li>See the <a href="/docs/">Docs</a> for SDK examples and coding agent setup</li>
+        </ul>
+    </div>
+{% endblock %}
+
+{% block config_script %}
+<script>window.PORTAL_CONFIG = { apiKey: {% if has_key %}"{{ current_key }}"{% else %}null{% endif %} };</script>
+{% endblock %}

@@ -28,7 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, template_folder='../templates')
+app = Flask(__name__, template_folder='../templates', static_folder='../static', static_url_path='/portal/static')
 
 # ===== DEVELOPMENT MODE CONFIGURATION =====
 # Security-first development access for testing without OIDC
@@ -605,7 +605,7 @@ def portal_dashboard():
         has_key = len(credentials) > 0
         current_key = credentials[0]['key'] if has_key else None
 
-        return render_template('dashboard.html',
+        return render_template('keys.html',
                              user_identity=user_identity,
                              has_key=has_key,
                              current_key=current_key)

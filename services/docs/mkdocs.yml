@@ -1,0 +1,36 @@
+site_name: AI Gateway Docs
+site_url: https://ai-gateway.portal.chalmers.se/docs/
+use_directory_urls: true
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - content.code.copy
+    - search.suggest
+    - navigation.top
+
+nav:
+  - Getting Started: index.md
+  - OpenWebUI: openwebui.md
+  - SDK Examples: sdk-examples.md
+  - Coding Agents: coding-agents.md
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - pymdownx.details
+
+custom_dir: overrides

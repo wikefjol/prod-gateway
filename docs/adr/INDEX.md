@@ -11,3 +11,4 @@
 | [006](006-vllm-multi-port-routing.md) | vLLM Multi-Port Routing Strategy | One route per model at priority 11; scaling options discussed |
 | [007](007-black-box-testing.md) | Black-Box Testing with Characterization Fixtures | Capture real gateway responses as fixtures; test against those; commit to git |
 | [008](008-swag-reverse-proxy.md) | SWAG Reverse Proxy | Replace host-level Apache2 with in-repo SWAG container; multi-network routing by domain |
+| [009](009-mkdocs-direct-routing.md) | MkDocs Docs Site via APISIX | Serve docs at /docs/ through APISIX with OIDC, same session as portal |
